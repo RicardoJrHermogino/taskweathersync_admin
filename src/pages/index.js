@@ -1,388 +1,245 @@
-// import React, { useState } from "react";
-// import { useRouter } from "next/router";
-// import { Box, Button, Container, TextField, Typography, IconButton, InputAdornment } from "@mui/material";
-// import { Visibility, VisibilityOff } from "@mui/icons-material";
-// import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-// import { signIn } from "next-auth/react"; // Import NextAuth's signIn method
-
-// const Login = () => {
-//   const router = useRouter();
-//   const [username, setUserName] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [showPassword, setShowPassword] = useState(false);
-//   const [error, setError] = useState("");
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     // Use NextAuth's signIn method to authenticate the user
-//     const result = await signIn("credentials", {
-//       redirect: false, // Prevent automatic redirect
-//       username,
-//       password,
-//     });
-
-//     if (result.error) {
-//       setError(result.error); // Display error message if authentication fails
-//     } else {
-//       // Redirect to the dashboard page after successful login
-//       router.push("/inside_pages/dashboard");
-//     }
-//   };
-
-//   const togglePasswordVisibility = () => {
-//     setShowPassword(!showPassword);
-//   };
-
-//   return (
-//     <Box
-//       sx={{
-//         background: "linear-gradient(to bottom, #e0f7fa, #ffffff)",
-//         minHeight: "100vh",
-//         display: "flex",
-//         alignItems: "center",
-//         justifyContent: "center",
-//       }}
-//     >
-//       <Container
-//         maxWidth="xs"
-//         sx={{
-//           background: "#ffffff",
-//           borderRadius: "16px",
-//           boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.1)",
-//           textAlign: "center",
-//           padding: 4,
-//         }}
-//       >
-//         <Box
-//           sx={{
-//             display: "flex",
-//             justifyContent: "center",
-//             alignItems: "center",
-//             width: 48,
-//             height: 48,
-//             backgroundColor: "#f5f5f5",
-//             borderRadius: "50%",
-//             margin: "0 auto 16px",
-//           }}
-//         >
-//           <LockOutlinedIcon color="primary" />
-//         </Box>
-//         <Typography variant="h5" gutterBottom>
-//           Sign in to your admin account
-//         </Typography>
-
-//         <Box component="form" noValidate onSubmit={handleSubmit}>
-//           <TextField
-//             value={username}
-//             onChange={(e) => setUserName(e.target.value)}
-//             margin="normal"
-//             fullWidth
-//             label="Username"
-//             variant="outlined"
-//             type="text"
-//           />
-//           <TextField
-//             value={password}
-//             onChange={(e) => setPassword(e.target.value)}
-//             margin="normal"
-//             fullWidth
-//             label="Password"
-//             variant="outlined"
-//             type={showPassword ? "text" : "password"}
-//             InputProps={{
-//               endAdornment: (
-//                 <InputAdornment position="end">
-//                   <IconButton onClick={togglePasswordVisibility} edge="end">
-//                     {showPassword ? <VisibilityOff /> : <Visibility />}
-//                   </IconButton>
-//                 </InputAdornment>
-//               ),
-//             }}
-//           />
-
-//           {error && (
-//             <Typography color="error" sx={{ mt: 2 }}>
-//               {error}
-//             </Typography>
-//           )}
-
-//           <Button
-//             type="submit"
-//             variant="contained"
-//             color="primary"
-//             fullWidth
-//             sx={{ textTransform: "none", borderRadius: "8px", py: 1.5 }}
-//           >
-//             Sign in
-//           </Button>
-//         </Box>
-//       </Container>
-//     </Box>
-//   );
-// };
-
-// export default Login;
-
-
-// import React, { useState, useEffect } from 'react';
-// import {
-//   Container,
-//   Typography,
-//   TextField,
-//   Button,
-//   Table,
-//   TableBody,
-//   TableCell,
-//   TableContainer,
-//   TableHead,
-//   TableRow,
-//   Paper,
-//   IconButton,
-//   Box,
-// } from '@mui/material';
-// import DeleteIcon from '@mui/icons-material/Delete';
-// import EditIcon from '@mui/icons-material/Edit';
-
-// export default function Products() {
-//   const [products, setProducts] = useState([]);
-//   const [form, setForm] = useState({ name: '', category: '' });
-//   const [editId, setEditId] = useState(null);
-
-//   // Fetch all products
-//   const fetchProducts = async () => {
-//     const res = await fetch('/api/products');
-//     const data = await res.json();
-//     setProducts(data);
-//   };
-
-//   // Handle form submission (Add or Update)
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     const method = editId ? 'PUT' : 'POST';
-//     const url = editId ? `/api/products/${editId}` : '/api/products';
-
-//     const res = await fetch(url, {
-//       method,
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify(form),
-//     });
-
-//     if (res.ok) {
-//       fetchProducts();
-//       setForm({ name: '', category: '' });
-//       setEditId(null);
-//     }
-//   };
-
-//   // Handle Delete
-//   const handleDelete = async (id) => {
-//     const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
-//     if (res.ok) fetchProducts();
-//   };
-
-//   // Populate form for editing
-//   const handleEdit = (product) => {
-//     setForm({ name: product.name, category: product.category });
-//     setEditId(product.id);
-//   };
-
-//   useEffect(() => {
-//     fetchProducts();
-//   }, []);
-
-//   return (
-//     <Container maxWidth="md" sx={{ mt: 4 }}>
-//       <Typography variant="h4" gutterBottom>
-//         Product Management
-//       </Typography>
-//       <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
-//         <TextField
-//           label="Name"
-//           value={form.name}
-//           onChange={(e) => setForm({ ...form, name: e.target.value })}
-//           fullWidth
-//           sx={{ mb: 2 }}
-//         />
-//         <TextField
-//           label="Category"
-//           value={form.category}
-//           onChange={(e) => setForm({ ...form, category: e.target.value })}
-//           fullWidth
-//           sx={{ mb: 2 }}
-//         />
-//         <Button variant="contained" type="submit">
-//           {editId ? 'Update Product' : 'Add Product'}
-//         </Button>
-//       </Box>
-//       <TableContainer component={Paper}>
-//         <Table>
-//           <TableHead>
-//             <TableRow>
-//               <TableCell>ID</TableCell>
-//               <TableCell>Name</TableCell>
-//               <TableCell>Category</TableCell>
-//               <TableCell>Actions</TableCell>
-//             </TableRow>
-//           </TableHead>
-//           <TableBody>
-//             {products.map((product) => (
-//               <TableRow key={product.id}>
-//                 <TableCell>{product.id}</TableCell>
-//                 <TableCell>{product.name}</TableCell>
-//                 <TableCell>{product.category}</TableCell>
-//                 <TableCell>
-//                   <IconButton onClick={() => handleEdit(product)}>
-//                     <EditIcon />
-//                   </IconButton>
-//                   <IconButton onClick={() => handleDelete(product.id)}>
-//                     <DeleteIcon />
-//                   </IconButton>
-//                 </TableCell>
-//               </TableRow>
-//             ))}
-//           </TableBody>
-//         </Table>
-//       </TableContainer>
-//     </Container>
-//   );
-// }
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useRouter } from "next/router";
 import {
-  Container,
-  Typography,
-  TextField,
-  Button,
   Box,
-  Alert,
-} from '@mui/material';
+  Button,
+  Container,
+  TextField,
+  Typography,
+  IconButton,
+  InputAdornment,
+  Paper,
+} from "@mui/material";
+import { Visibility, VisibilityOff, Cloud } from "@mui/icons-material";
+import { signIn } from "next-auth/react";
 
-export default function CoconutTasks() {
-  const [form, setForm] = useState({
-    task_name: '',
-    weatherRestrictions: '',
-    details: '',
-    requiredTemperature_min: '',
-    requiredTemperature_max: '',
-    idealHumidity_min: '',
-    idealHumidity_max: '',
-    requiredWindSpeed_max: '',
-    requiredWindGust_max: '',
-    requiredCloudCover_max: '',
-    requiredPressure_min: '',
-    requiredPressure_max: '',
-  });
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+const Login = () => {
+  const router = useRouter();
+  const [username, setUserName] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage('');
-    setError('');
-
+    setIsLoading(true);
+    
     try {
-      const res = await fetch('/api/coconutTasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const result = await signIn("credentials", {
+        redirect: false,
+        username,
+        password,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessage(data.message || 'Task added successfully!');
-        setForm({
-          task_name: '',
-          weatherRestrictions: '',
-          details: '',
-          requiredTemperature_min: '',
-          requiredTemperature_max: '',
-          idealHumidity_min: '',
-          idealHumidity_max: '',
-          requiredWindSpeed_max: '',
-          requiredWindGust_max: '',
-          requiredCloudCover_max: '',
-          requiredPressure_min: '',
-          requiredPressure_max: '',
-        });
+      if (result.error) {
+        setError(result.error);
       } else {
-        const errorData = await res.json();
-        setError(errorData.error || 'An error occurred');
+        router.push("/inside_pages/dashboard");
       }
     } catch (err) {
-      setError('An error occurred while submitting the form');
-      console.error(err);
+      setError("Authentication failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prevForm) => ({ ...prevForm, [name]: value }));
-  };
-
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Add Coconut Task
-      </Typography>
+    <Box
+  sx={{
+    width: "100vw",
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)",
+    position: "absolute",
+    top: 0,
+    left: 0,
+  }}
+>
 
-      {message && <Alert severity="success">{message}</Alert>}
-      {error && <Alert severity="error">{error}</Alert>}
-
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 4 }}>
-        <TextField
-          label="Task Name"
-          name="task_name"
-          value={form.task_name}
-          onChange={handleChange}
-          fullWidth
-          required
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          label="Weather Restrictions"
-          name="weatherRestrictions"
-          value={form.weatherRestrictions}
-          onChange={handleChange}
-          fullWidth
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          label="Details"
-          name="details"
-          value={form.details}
-          onChange={handleChange}
-          fullWidth
-          multiline
-          rows={3}
-          sx={{ mb: 2 }}
-        />
-        {[
-          'requiredTemperature_min',
-          'requiredTemperature_max',
-          'idealHumidity_min',
-          'idealHumidity_max',
-          'requiredWindSpeed_max',
-          'requiredWindGust_max',
-          'requiredCloudCover_max',
-          'requiredPressure_min',
-          'requiredPressure_max',
-        ].map((field) => (
-          <TextField
-            key={field}
-            label={field.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
-            name={field}
-            value={form[field]}
-            onChange={handleChange}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-        ))}
-
-        <Button variant="contained" type="submit" fullWidth>
-          Add Task
-        </Button>
+      {/* Decorative elements */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: "5%",
+          left: "5%",
+          opacity: 0.1,
+          transform: "scale(2)",
+        }}
+      >
+        <Cloud sx={{ fontSize: 100, color: "#2196F3" }} />
       </Box>
-    </Container>
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: "10%",
+          right: "8%",
+          opacity: 0.1,
+          transform: "scale(1.5)",
+        }}
+      >
+        <Cloud sx={{ fontSize: 80, color: "#2196F3" }} />
+      </Box>
+
+      <Container maxWidth="xs" sx={{ my: "auto", position: "relative" }}>
+        <Box sx={{ mb: 4, textAlign: "center" }}>
+          <Cloud sx={{ fontSize: 40, color: "#1976D2", mb: 2 }} />
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 600,
+              color: "#1565C0",
+              letterSpacing: "-0.5px",
+            }}
+          >
+            TaskWeatherSync 
+          </Typography>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              color: "#1976D2",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              fontSize: "0.75rem",
+            }}
+          >
+            Admin Portal
+          </Typography>
+        </Box>
+
+        <Paper
+          elevation={0}
+          sx={{
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            backdropFilter: "blur(10px)",
+            borderRadius: 3,
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            p: 4,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 500,
+              color: "#1565C0",
+              mb: 1,
+            }}
+          >
+            Sign in
+          </Typography>
+          
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#5C6BC0",
+              mb: 4,
+            }}
+          >
+            Access your admin dashboard
+          </Typography>
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              value={username}
+              onChange={(e) => setUserName(e.target.value)}
+              fullWidth
+              placeholder="Username"
+              variant="outlined"
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  '& fieldset': {
+                    borderColor: 'rgba(25, 118, 210, 0.2)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(25, 118, 210, 0.4)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1976D2',
+                  }
+                },
+              }}
+              InputProps={{
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            <TextField
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fullWidth
+              placeholder="Password"
+              type={showPassword ? "text" : "password"}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  '& fieldset': {
+                    borderColor: 'rgba(25, 118, 210, 0.2)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(25, 118, 210, 0.4)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#1976D2',
+                  }
+                },
+              }}
+              InputProps={{
+                sx: { borderRadius: 2 },
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      sx={{ color: '#5C6BC0' }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {error && (
+              <Typography
+                color="error"
+                variant="body2"
+                sx={{ mb: 2, fontSize: "0.875rem" }}
+              >
+                {error}
+              </Typography>
+            )}
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={isLoading}
+              sx={{
+                py: 1.75,
+                backgroundColor: '#1976D2',
+                borderRadius: 2,
+                textTransform: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 500,
+                boxShadow: '0 2px 8px rgba(25, 118, 210, 0.25)',
+                '&:hover': {
+                  backgroundColor: '#1565C0',
+                  boxShadow: '0 4px 12px rgba(25, 118, 210, 0.35)',
+                },
+              }}
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
-}
+};
+
+export default Login;

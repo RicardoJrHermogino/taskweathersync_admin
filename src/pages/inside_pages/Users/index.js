@@ -9,108 +9,119 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  IconButton,
   Button,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Card,
-  CardContent,
-  Menu,
-  MenuItem,
   InputAdornment,
   Tooltip,
   Snackbar,
   CircularProgress,
-  Container
+  Container,
+  Card,
+  CardContent,
+  
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Search as SearchIcon,
-  MoreVert as MoreVertIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  ContentCopy as CopyIcon
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import ProtectedRoute from '../components/protectedRoute';
 
-const UsersPage = () => {
+const DevicesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false); // Add loading state for redirect
-  const { data: session, status } = useSession(); // Get session data and status
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect to login page if session is not found, but not during loading state
-    if (status === 'loading') return; // Don't redirect during loading state
-
+    if (status === 'loading') return; // Wait until session data is fetched
     if (!session) {
-      setIsRedirecting(true); // Set the redirect state
-      router.push('/'); // Redirect to login if no session exists
+      router.push('/'); // Redirect if not logged in
     }
-  }, [session, status, router]); // Watch for session and status changes
+  }, [session, status, router]);
 
-  // Show a loading state while session is being fetched
-  if (status === 'loading' || isRedirecting) {
-    return (
-      <Container>
-        <CircularProgress /> {/* Spinner during loading state */}
-      </Container>
-    );
-  }
-
-  // If no session exists, do not render the page content
-  if (!session) {
-    return null; // Don't render anything if no session is found
-  }
-
-  // Sample user data structured according to the provided format
-  const users = [
-    {
-      device_id: "06e4e386-c6ff-42a4-9727-2933c9aac2d4",
-      created_at: "2024-12-18 11:40:42"
-    },
-    {
-      device_id: "07bd82e0-63fa-4202-8b0f-e7df60e646622",
-      created_at: "2025-01-14 22:16:08"
-    },
-    // Add more users as needed
-  ];
-
-  const handleOpenMenu = (event, user) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedUser(user);
+  // Fetch devices from the API
+  const fetchDevices = async () => {
+    try {
+      const res = await fetch('/api/devices');
+      const data = await res.json();
+      setDevices(data);  // Set devices to state
+    } catch (error) {
+      console.error('Failed to fetch devices', error);
+    }
   };
 
-  const handleCloseMenu = () => {
-    setAnchorEl(null);
-    setSelectedUser(null);
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  // Handle device deletion
+  const handleDeleteDevice = async (device_id) => {
+    try {
+      const res = await fetch('/api/devices', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_id }),
+      });
+
+      if (res.ok) {
+        fetchDevices(); // Refresh devices list after deletion
+        setSnackbarOpen(true); // Show confirmation snackbar
+      } else {
+        alert('Failed to delete device');
+      }
+    } catch (error) {
+      console.error('Error deleting device', error);
+    }
   };
 
-  const handleCopyDeviceId = (deviceId) => {
-    navigator.clipboard.writeText(deviceId);
-    setSnackbarOpen(true);
-    handleCloseMenu();
-  };
-
+  // Show date in a readable format
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
 
+  // Format the input date (MM/DD/YYYY) to YYYY-MM-DD
+  const formatSearchDate = (dateString) => {
+    const [month, day, year] = dateString.split('/'); // Split the input by "/"
+    return `${year}-${month}-${day}`; // Return in YYYY-MM-DD format
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Filter devices by registration date (compare day/month/year)
+  const filteredDevices = devices.filter(device => {
+    if (!searchTerm) return true; // Return all devices if no search term
+
+    const searchDate = formatSearchDate(searchTerm); // Format the input date
+    const deviceDate = new Date(device.created_at);
+    const formattedDeviceDate = deviceDate.toISOString().split('T')[0]; // Format device date to YYYY-MM-DD
+
+    return formattedDeviceDate === searchDate; // Match formatted date
+  });
+
+  if (status === 'loading') {
+    return (
+      <Container>
+        <CircularProgress />
+      </Container>
+    );
+  }
+
+  if (!session) {
+    return null; // If no session, return nothing
+  }
+
   return (
+    <ProtectedRoute>
     <Layout>
       <Box sx={{ p: 3 }}>
-        {/* Header Section */}
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
               Device Management
@@ -119,36 +130,26 @@ const UsersPage = () => {
               Manage registered devices and their IDs
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
-            sx={{ height: 'fit-content' }}
-          >
-            Add New Device
-          </Button>
         </Box>
 
-        {/* Stats Card */}
         <Card sx={{ mb: 4 }}>
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Total Registered Devices
             </Typography>
             <Typography variant="h3" component="div">
-              {users.length}
+              {devices.length}
             </Typography>
           </CardContent>
         </Card>
 
-        {/* Search Section */}
         <Paper sx={{ p: 2, mb: 4 }}>
           <TextField
             fullWidth
             variant="outlined"
-            placeholder="Search device IDs..."
+            placeholder="Search by registration date (MM/DD/YYYY)"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearch}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -156,11 +157,9 @@ const UsersPage = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ maxWidth: { sm: '100%', md: '400px' } }}
           />
         </Paper>
 
-        {/* Devices Table */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -171,8 +170,8 @@ const UsersPage = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.device_id} hover>
+              {filteredDevices.map((device) => (
+                <TableRow key={device.device_id} hover>
                   <TableCell>
                     <Tooltip title="Click to copy" placement="top">
                       <Box
@@ -181,69 +180,28 @@ const UsersPage = () => {
                           cursor: 'pointer',
                           '&:hover': { textDecoration: 'underline' }
                         }}
-                        onClick={() => handleCopyDeviceId(user.device_id)}
+                        onClick={() => navigator.clipboard.writeText(device.device_id)}
                       >
-                        {user.device_id}
+                        {device.device_id}
                       </Box>
                     </Tooltip>
                   </TableCell>
-                  <TableCell>{formatDate(user.created_at)}</TableCell>
+                  <TableCell>{formatDate(device.created_at)}</TableCell>
                   <TableCell align="right">
-                    <IconButton
+                    <Button
+                      color="error"
                       size="small"
-                      onClick={(event) => handleOpenMenu(event, user)}
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteDevice(device.device_id)}
                     >
-                      <MoreVertIcon />
-                    </IconButton>
+                      Delete
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-
-        {/* Actions Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleCloseMenu}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        >
-          <MenuItem onClick={() => handleCopyDeviceId(selectedUser?.device_id)}>
-            <CopyIcon fontSize="small" sx={{ mr: 1 }} />
-            Copy ID
-          </MenuItem>
-          <MenuItem onClick={handleCloseMenu}>
-            <EditIcon fontSize="small" sx={{ mr: 1 }} />
-            Edit
-          </MenuItem>
-          <MenuItem onClick={handleCloseMenu} sx={{ color: 'error.main' }}>
-            <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-            Delete
-          </MenuItem>
-        </Menu>
-
-        {/* Add Device Dialog */}
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Add New Device</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 2 }}>
-              <TextField
-                fullWidth
-                label="Device ID"
-                variant="outlined"
-                placeholder="Enter device ID or generate automatically"
-              />
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setOpenDialog(false)}>
-              Add Device
-            </Button>
-          </DialogActions>
-        </Dialog>
 
         {/* Snackbar for copy confirmation */}
         <Snackbar
@@ -254,7 +212,8 @@ const UsersPage = () => {
         />
       </Box>
     </Layout>
+    </ProtectedRoute>
   );
 };
 
-export default UsersPage;
+export default DevicesPage;
