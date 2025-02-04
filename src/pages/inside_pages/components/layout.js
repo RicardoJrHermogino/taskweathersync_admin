@@ -46,6 +46,9 @@ const Layout = ({ children }) => {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const router = useRouter();
 
+
+  if (!children) return null;
+
   // Update desktop drawer state when screen size changes
   useEffect(() => {
     if (!isMobile && !isTablet) {
@@ -201,6 +204,7 @@ const Layout = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {children}
       <CssBaseline />
       <AppBar
         position="fixed"
