@@ -18,11 +18,13 @@ import {
   Container,
   Card,
   CardContent,
-  
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  CheckCircle as ActiveIcon,
+  Block as InactiveIcon
 } from '@mui/icons-material';
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
@@ -37,18 +39,48 @@ const DevicesPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === 'loading') return; // Wait until session data is fetched
+    if (status === 'loading') return;
     if (!session) {
-      router.push('/'); // Redirect if not logged in
+      router.push('/');
     }
   }, [session, status, router]);
 
-  // Fetch devices from the API
+  const updateDeviceStatuses = async () => {
+    try {
+      const res = await fetch('/api/devices/update_status', {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        console.error('Failed to update device statuses');
+      }
+    } catch (error) {
+      console.error('Error updating device statuses', error);
+    }
+  };
+
+   // Trigger status update and fetch devices when page loads
+   useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/');
+      return;
+    }
+
+    // Update statuses and then fetch devices
+    const initializeDevicePage = async () => {
+      await updateDeviceStatuses();
+      await fetchDevices();
+    };
+
+    initializeDevicePage();
+  }, [session, status, router]);
+
   const fetchDevices = async () => {
     try {
       const res = await fetch('/api/devices');
       const data = await res.json();
-      setDevices(data);  // Set devices to state
+      setDevices(data);
     } catch (error) {
       console.error('Failed to fetch devices', error);
     }
@@ -58,7 +90,6 @@ const DevicesPage = () => {
     fetchDevices();
   }, []);
 
-  // Handle device deletion
   const handleDeleteDevice = async (device_id) => {
     try {
       const res = await fetch('/api/devices', {
@@ -68,8 +99,8 @@ const DevicesPage = () => {
       });
 
       if (res.ok) {
-        fetchDevices(); // Refresh devices list after deletion
-        setSnackbarOpen(true); // Show confirmation snackbar
+        fetchDevices();
+        setSnackbarOpen(true);
       } else {
         alert('Failed to delete device');
       }
@@ -78,31 +109,28 @@ const DevicesPage = () => {
     }
   };
 
-  // Show date in a readable format
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
 
-  // Format the input date (MM/DD/YYYY) to YYYY-MM-DD
   const formatSearchDate = (dateString) => {
-    const [month, day, year] = dateString.split('/'); // Split the input by "/"
-    return `${year}-${month}-${day}`; // Return in YYYY-MM-DD format
+    const [month, day, year] = dateString.split('/');
+    return `${year}-${month}-${day}`;
   };
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // Filter devices by registration date (compare day/month/year)
   const filteredDevices = devices.filter(device => {
-    if (!searchTerm) return true; // Return all devices if no search term
+    if (!searchTerm) return true;
 
-    const searchDate = formatSearchDate(searchTerm); // Format the input date
+    const searchDate = formatSearchDate(searchTerm);
     const deviceDate = new Date(device.created_at);
-    const formattedDeviceDate = deviceDate.toISOString().split('T')[0]; // Format device date to YYYY-MM-DD
+    const formattedDeviceDate = deviceDate.toISOString().split('T')[0];
 
-    return formattedDeviceDate === searchDate; // Match formatted date
+    return formattedDeviceDate === searchDate;
   });
 
   if (status === 'loading') {
@@ -114,7 +142,7 @@ const DevicesPage = () => {
   }
 
   if (!session) {
-    return null; // If no session, return nothing
+    return null;
   }
 
   return (
@@ -166,6 +194,8 @@ const DevicesPage = () => {
               <TableRow>
                 <TableCell>Device ID</TableCell>
                 <TableCell>Registration Date</TableCell>
+                <TableCell>Last Active</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -187,6 +217,15 @@ const DevicesPage = () => {
                     </Tooltip>
                   </TableCell>
                   <TableCell>{formatDate(device.created_at)}</TableCell>
+                  <TableCell>{formatDate(device.last_active)}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={device.status}
+                      color={device.status === 'active' ? 'success' : 'error'}
+                      size="small"
+                      icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
+                    />
+                  </TableCell>
                   <TableCell align="right">
                     <Button
                       color="error"
@@ -203,7 +242,6 @@ const DevicesPage = () => {
           </Table>
         </TableContainer>
 
-        {/* Snackbar for copy confirmation */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={2000}
