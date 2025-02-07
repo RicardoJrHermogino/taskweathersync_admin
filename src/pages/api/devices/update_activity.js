@@ -1,3 +1,4 @@
+// update_activity.js
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -39,50 +40,58 @@ export default async function handler(req, res) {
     let connection;
     try {
       connection = await mysql.createConnection(dbConfig);
-      console.log('Database connected successfully');
+      
+      // Set timezone at session level
+      await connection.execute("SET time_zone='+08:00'");
 
-      // First, check if the device exists
+      // Check if device exists
       const [existingDevice] = await connection.execute(
         'SELECT device_id FROM devices WHERE device_id = ?',
         [deviceId]
       );
 
+      const currentDate = new Date().toISOString().split('T')[0];
+
       if (existingDevice.length === 0) {
-        // Device doesn't exist, register it first
         console.log('Device not found, registering new device');
         await connection.execute(
-          'INSERT INTO devices (device_id, created_at, last_active, status) VALUES (?, NOW(), NOW(), ?)',
-          [deviceId, 'active']
+          'INSERT INTO devices (device_id, created_at, last_active, status) VALUES (?, ?, ?, ?)',
+          [deviceId, currentDate, currentDate, 'active']
         );
         
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
-          timestamp: new Date().toISOString(),
+          timestamp: currentDate,
           isNewDevice: true
         });
       }
 
-      // Update existing device's activity and status
+      // Update existing device's last_active timestamp and status
       const updateQuery = `
         UPDATE devices 
         SET 
-          last_active = CURRENT_TIMESTAMP,
+          last_active = ?,
           status = CASE
-            WHEN DATEDIFF(CURRENT_TIMESTAMP, last_active) > 30 THEN 'inactive'
-            WHEN DATEDIFF(CURRENT_TIMESTAMP, last_active) > 7 THEN 'idle'
+            WHEN DATEDIFF(?, last_active) > 30 THEN 'inactive'
+            WHEN DATEDIFF(?, last_active) > 7 THEN 'idle'
             ELSE 'active'
           END
         WHERE device_id = ?
       `;
       
       console.log('Executing update query for existing device');
-      const [result] = await connection.execute(updateQuery, [deviceId]);
+      const [result] = await connection.execute(updateQuery, [
+        currentDate,
+        currentDate,
+        currentDate,
+        deviceId
+      ]);
 
       await connection.end();
       return res.status(200).json({
         message: 'Activity updated successfully',
-        timestamp: new Date().toISOString(),
+        timestamp: currentDate,
         affectedRows: result.affectedRows,
         isNewDevice: false
       });

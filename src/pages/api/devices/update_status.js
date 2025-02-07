@@ -1,4 +1,6 @@
 import pool from "@/lib/db";
+import { zonedTimeToUtc } from 'date-fns-tz'; // Import timezone handling library
+
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {

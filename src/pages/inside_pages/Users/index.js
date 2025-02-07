@@ -111,7 +111,7 @@ const DevicesPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleString();
+    return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
   };
 
   const formatSearchDate = (dateString) => {
