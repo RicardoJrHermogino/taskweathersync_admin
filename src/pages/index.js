@@ -40,7 +40,7 @@ const Login = () => {
     <>
       {/* SEO Meta Tags */}
       <Head>
-        <title>TaskWeatherSync Admin Portal Sanaol</title>
+        <title>TaskWeatherSync Admin Portal </title>
         <meta name="description" content="Sign in to the TaskWeatherSync Admin Portal to manage tasks and weather updates." />
         <meta name="robots" content="index, follow" />
       </Head>
@@ -93,7 +93,7 @@ const Login = () => {
                 letterSpacing: "-0.5px",
               }}
             >
-              TaskWeatherSync
+              TaskWeatherSync Sanaol
             </Typography>
             <Typography
               variant="subtitle2"
