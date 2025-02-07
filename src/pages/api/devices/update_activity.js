@@ -1,4 +1,3 @@
-// API Route: pages/api/devices/update_activity.js
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -9,7 +8,6 @@ const dbConfig = {
 };
 
 export default async function handler(req, res) {
-  // Add debug logging
   console.log('Received request:', {
     method: req.method,
     body: req.body,
@@ -32,7 +30,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { deviceId } = req.body;
     
-    console.log('Received deviceId:', deviceId); // Debug log
+    console.log('Received deviceId:', deviceId);
     
     if (!deviceId) {
       return res.status(400).json({ error: 'Device ID is required' });
@@ -40,12 +38,33 @@ export default async function handler(req, res) {
 
     let connection;
     try {
-      // Test database connection
       connection = await mysql.createConnection(dbConfig);
-      console.log('Database connected successfully'); // Debug log
+      console.log('Database connected successfully');
 
-      // Log the SQL query we're about to execute
-      const query = `
+      // First, check if the device exists
+      const [existingDevice] = await connection.execute(
+        'SELECT device_id FROM devices WHERE device_id = ?',
+        [deviceId]
+      );
+
+      if (existingDevice.length === 0) {
+        // Device doesn't exist, register it first
+        console.log('Device not found, registering new device');
+        await connection.execute(
+          'INSERT INTO devices (device_id, created_at, last_active, status) VALUES (?, NOW(), NOW(), ?)',
+          [deviceId, 'active']
+        );
+        
+        await connection.end();
+        return res.status(201).json({
+          message: 'Device registered and activity updated successfully',
+          timestamp: new Date().toISOString(),
+          isNewDevice: true
+        });
+      }
+
+      // Update existing device's activity and status
+      const updateQuery = `
         UPDATE devices 
         SET 
           last_active = CURRENT_TIMESTAMP,
@@ -56,26 +75,20 @@ export default async function handler(req, res) {
           END
         WHERE device_id = ?
       `;
-      console.log('Executing query:', query, 'with deviceId:', deviceId); // Debug log
-
-      const [result] = await connection.execute(query, [deviceId]);
-      console.log('Query result:', result); // Debug log
+      
+      console.log('Executing update query for existing device');
+      const [result] = await connection.execute(updateQuery, [deviceId]);
 
       await connection.end();
-
-      if (result.affectedRows === 0) {
-        console.log('No rows affected - device not found'); // Debug log
-        return res.status(404).json({ error: 'Device not found' });
-      }
-
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Activity updated successfully',
         timestamp: new Date().toISOString(),
-        affectedRows: result.affectedRows
+        affectedRows: result.affectedRows,
+        isNewDevice: false
       });
 
     } catch (error) {
-      console.error('Database error:', error); // Detailed error logging
+      console.error('Database error:', error);
       if (connection) {
         try {
           await connection.end();
@@ -83,7 +96,7 @@ export default async function handler(req, res) {
           console.error('Error closing connection:', closeError);
         }
       }
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Failed to update activity',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });

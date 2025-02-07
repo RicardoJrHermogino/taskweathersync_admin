@@ -93,7 +93,7 @@ const Login = () => {
                 letterSpacing: "-0.5px",
               }}
             >
-              TaskWeatherSync Sanaol
+              TaskWeatherSync
             </Typography>
             <Typography
               variant="subtitle2"
