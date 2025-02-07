@@ -7,6 +7,21 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
+// Helper function to check for duplicate tasks
+async function checkDuplicateTask(connection, deviceId, taskId, date, time, location) {
+  const [rows] = await connection.execute(
+    `SELECT COUNT(*) as count 
+     FROM scheduled_tasks 
+     WHERE device_id = ? 
+     AND task_id = ? 
+     AND date = ? 
+     AND time = ? 
+     AND location = ?`,
+    [deviceId, taskId, date, time, location]
+  );
+  return rows[0].count > 0;
+}
+
 export default async function handler(req, res) {
   let connection;
 
@@ -56,7 +71,23 @@ export default async function handler(req, res) {
 
       const taskId = taskRows[0].task_id;
 
-      // Find the coordinates for the location from your locationCoordinates mapping
+      // Check for duplicate task
+      const isDuplicate = await checkDuplicateTask(
+        connection,
+        userId,
+        taskId,
+        date,
+        time,
+        location
+      );
+
+      if (isDuplicate) {
+        return res.status(409).json({ 
+          message: 'A task with these details already exists' 
+        });
+      }
+
+      // Find the coordinates for the location
       const [locationRows] = await connection.execute(
         'SELECT lat, lon FROM location_coordinates WHERE location_name = ?',
         [location]
@@ -73,8 +104,8 @@ export default async function handler(req, res) {
       // Insert the scheduled task with all required fields
       const [result] = await connection.execute(
         `INSERT INTO scheduled_tasks 
-        (task_id, device_id, location, lat, lon, date, time) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         (task_id, device_id, location, lat, lon, date, time) 
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [taskId, userId, location, lat, lon, date, time]
       );
 
@@ -102,7 +133,7 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Error:', error.message || error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });

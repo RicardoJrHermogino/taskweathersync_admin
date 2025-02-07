@@ -12,7 +12,7 @@ const dbConfig = {
 
 export default async function fetchWeatherDataHandler(req, res) {
     // Allow multiple origins
-    const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001'];
+    const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001',];
     const origin = req.headers.origin;
     
     if (allowedOrigins.includes(origin)) {

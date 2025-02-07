@@ -1,31 +1,32 @@
-  import React, { useState, useEffect } from 'react';
-  import {
-    Container,
-    Typography,
-    TextField,
-    Button,
-    Box,
-    Card,
-    Grid,
-    IconButton,
-    Stepper,
-    Step,
-    StepLabel,
-    Dialog,
-    Tooltip,
-    Chip,
-    Stack,
-    FormControl,
-    FormLabel,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-    FormGroup,
-    FormControlLabel,
-    Checkbox,
-    Select,
-    MenuItem,
-  } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Box,
+  Card,
+  Grid,
+  IconButton,
+  Stepper,
+  Step,
+  StepLabel,
+  Dialog,
+  Tooltip,
+  Chip,
+  Stack,
+  FormControl,
+  FormLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Select,
+  MenuItem,
+  InputLabel,
+} from '@mui/material';
   import {
     Delete as DeleteIcon,
     Edit as EditIcon,
@@ -469,6 +470,7 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   onChange={(e) => setForm({ ...form, task_name: e.target.value })}
                   fullWidth
                   variant="outlined"
+                  required
                 />
               </Grid>
               <Grid item xs={12}>
@@ -480,11 +482,12 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   multiline
                   rows={3}
                   variant="outlined"
+                  required
                 />
               </Grid>
               <Grid item xs={12}>
                 <FormControl component="fieldset" fullWidth>
-                  <FormLabel component="legend">Weather Condition Requirements</FormLabel>
+                  <FormLabel component="legend" required>Weather Condition Requirements</FormLabel>
                   {Array.from(new Set(weatherConditions.map(c => c.group))).map(group => (
                     <Accordion key={group}>
                       <AccordionSummary
@@ -518,14 +521,14 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                                 label={`${condition.id} - ${condition.label}`}
                               />
                           ))}
-                      </FormGroup>
-                    </AccordionDetails>
-                  </Accordion>
-                ))}
-              </FormControl>
+                        </FormGroup>
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
-        );
+          );
         case 1:
           return (
             <Grid container spacing={3}>
@@ -534,11 +537,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   Temperature Range (°C)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Minimum Temperature</InputLabel>
                     <Select
                       value={form.requiredTemperature_min}
                       onChange={(e) => setForm({ ...form, requiredTemperature_min: e.target.value })}
-                      displayEmpty
+                      label="Minimum Temperature"
+                      required
                     >
                       <MenuItem value="" disabled>Select Minimum Temperature</MenuItem>
                       {temperatureOptionsMin.map((temp) => (
@@ -546,11 +551,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Maximum Temperature</InputLabel>
                     <Select
                       value={form.requiredTemperature_max}
                       onChange={(e) => setForm({ ...form, requiredTemperature_max: e.target.value })}
-                      displayEmpty
+                      label="Maximum Temperature"
+                      required
                       error={form.requiredTemperature_max <= form.requiredTemperature_min}
                     >
                       <MenuItem value="" disabled>Select Maximum Temperature</MenuItem>
@@ -572,11 +579,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   Humidity Range (%)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Minimum Humidity</InputLabel>
                     <Select
                       value={form.idealHumidity_min}
                       onChange={(e) => setForm({ ...form, idealHumidity_min: e.target.value })}
-                      displayEmpty
+                      label="Minimum Humidity"
+                      required
                     >
                       <MenuItem value="" disabled>Select Minimum Humidity</MenuItem>
                       {humidityOptionsMin.map((humidity) => (
@@ -584,11 +593,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Maximum Humidity</InputLabel>
                     <Select
                       value={form.idealHumidity_max}
                       onChange={(e) => setForm({ ...form, idealHumidity_max: e.target.value })}
-                      displayEmpty
+                      label="Maximum Humidity"
+                      required
                       error={form.idealHumidity_max <= form.idealHumidity_min}
                     >
                       <MenuItem value="" disabled>Select Maximum Humidity</MenuItem>
@@ -610,34 +621,38 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
         case 2:
           return (
             <Grid container spacing={3}>
-             <Grid item xs={12} md={6}>
-                        <FormControl fullWidth>
-                            <Select
-                                value={form.requiredWindSpeed_max}
-                                onChange={(e) => setForm({ ...form, requiredWindSpeed_max: e.target.value })}
-                                displayEmpty
-                            >
-                                <MenuItem value="" disabled>Select Maximum Wind Speed</MenuItem>
-                                {windSpeedOptions.map((speed) => (
-                                    <MenuItem key={speed} value={speed}>{speed} m/s</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <FormControl fullWidth>
-                            <Select
-                                value={form.requiredWindGust_max}
-                                onChange={(e) => setForm({ ...form, requiredWindGust_max: e.target.value })}
-                                displayEmpty
-                            >
-                                <MenuItem value="" disabled>Select Maximum Wind Gust</MenuItem>
-                                {windGustOptions.map((gust) => (
-                                    <MenuItem key={gust} value={gust}>{gust} m/s</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Maximum Wind Speed</InputLabel>
+                  <Select
+                    value={form.requiredWindSpeed_max}
+                    onChange={(e) => setForm({ ...form, requiredWindSpeed_max: e.target.value })}
+                    label="Maximum Wind Speed"
+                    required
+                  >
+                    <MenuItem value="" disabled>Select Maximum Wind Speed</MenuItem>
+                    {windSpeedOptions.map((speed) => (
+                      <MenuItem key={speed} value={speed}>{speed} m/s</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Maximum Wind Gust</InputLabel>
+                  <Select
+                    value={form.requiredWindGust_max}
+                    onChange={(e) => setForm({ ...form, requiredWindGust_max: e.target.value })}
+                    label="Maximum Wind Gust"
+                    required
+                  >
+                    <MenuItem value="" disabled>Select Maximum Wind Gust</MenuItem>
+                    {windGustOptions.map((gust) => (
+                      <MenuItem key={gust} value={gust}>{gust} m/s</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
               <Grid item xs={12} md={6}>
                 <TextField
                   label="Maximum Cloud Cover (%)"
@@ -649,6 +664,7 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   }}
                   inputProps={{ min: 1, max: 100 }}
                   fullWidth
+                  required
                   error={form.requiredCloudCover_max < 1 || form.requiredCloudCover_max > 100}
                   helperText={form.requiredCloudCover_max < 1 || form.requiredCloudCover_max > 100 ? 
                     "Value must be between 1 and 100" : ""}
@@ -659,11 +675,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                   Pressure Range (hPa)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Minimum Pressure</InputLabel>
                     <Select
                       value={form.requiredPressure_min}
                       onChange={(e) => setForm({ ...form, requiredPressure_min: e.target.value })}
-                      displayEmpty
+                      label="Minimum Pressure"
+                      required
                     >
                       <MenuItem value="" disabled>Select Minimum Pressure</MenuItem>
                       {pressureOptionsMin.map((pressure) => (
@@ -671,11 +689,13 @@ const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 10
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth required>
+                    <InputLabel>Maximum Pressure</InputLabel>
                     <Select
                       value={form.requiredPressure_max}
                       onChange={(e) => setForm({ ...form, requiredPressure_max: e.target.value })}
-                      displayEmpty
+                      label="Maximum Pressure"
+                      required
                       error={form.requiredPressure_max <= form.requiredPressure_min}
                     >
                       <MenuItem value="" disabled>Select Maximum Pressure</MenuItem>

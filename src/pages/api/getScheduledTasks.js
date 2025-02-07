@@ -7,6 +7,28 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
+// Helper function to check for duplicate tasks
+async function checkDuplicateTask(connection, deviceId, taskId, date, time, location, excludeSchedId = null) {
+  let query = `
+    SELECT COUNT(*) as count 
+    FROM scheduled_tasks 
+    WHERE device_id = ? 
+    AND task_id = ? 
+    AND date = ? 
+    AND time = ? 
+    AND location = ?`;
+  
+  const params = [deviceId, taskId, date, time, location];
+  
+  if (excludeSchedId) {
+    query += ' AND sched_id != ?';
+    params.push(excludeSchedId);
+  }
+
+  const [rows] = await connection.execute(query, params);
+  return rows[0].count > 0;
+}
+
 export default async function handler(req, res) {
   let connection;
 
@@ -52,36 +74,107 @@ export default async function handler(req, res) {
     }
     
     // PUT: Update a scheduled task
-else if (req.method === 'PUT') {
-  const { schedId, date, time, location, taskName } = req.body;
+    else if (req.method === 'PUT') {
+      const { schedId, date, time, location, taskName } = req.body;
 
-  if (!schedId) {
-    return res.status(400).json({ message: 'Scheduled Task ID is required' });
-  }
+      if (!schedId) {
+        return res.status(400).json({ message: 'Scheduled Task ID is required' });
+      }
 
-  // Find the task_id corresponding to the selected task_name
-    const [taskRows] = await connection.execute(
-      'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
-      [taskName]
-    );
+      // Get task_id and device_id
+      const [taskRows] = await connection.execute(
+        'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
+        [taskName]
+      );
 
-    if (taskRows.length === 0) {
-      return res.status(404).json({ message: 'Task not found' });
+      if (taskRows.length === 0) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
+
+      const taskId = taskRows[0].task_id;
+
+      // Get device_id for the scheduled task
+      const [schedRows] = await connection.execute(
+        'SELECT device_id FROM scheduled_tasks WHERE sched_id = ?',
+        [schedId]
+      );
+
+      if (schedRows.length === 0) {
+        return res.status(404).json({ message: 'Scheduled task not found' });
+      }
+
+      const deviceId = schedRows[0].device_id;
+
+      // Check for duplicates, excluding the current task
+      const isDuplicate = await checkDuplicateTask(
+        connection, 
+        deviceId, 
+        taskId, 
+        date, 
+        time, 
+        location, 
+        schedId
+      );
+
+      if (isDuplicate) {
+        return res.status(409).json({ 
+          message: 'A task with these details already exists' 
+        });
+      }
+
+      const [result] = await connection.execute(
+        'UPDATE scheduled_tasks SET date = ?, time = ?, location = ?, task_id = ? WHERE sched_id = ?',
+        [date, time, location, taskId, schedId]
+      );
+
+      if (result.affectedRows > 0) {
+        res.status(200).json({ message: 'Task updated successfully' });
+      } else {
+        res.status(404).json({ message: 'Task not found' });
+      }
     }
+    // POST: Create a new scheduled task
+    else if (req.method === 'POST') {
+      const { userId, task_name, date, time, location } = req.body;
 
-    const taskId = taskRows[0].task_id;
+      // Get task_id
+      const [taskRows] = await connection.execute(
+        'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
+        [task_name]
+      );
 
-    const [result] = await connection.execute(
-      'UPDATE scheduled_tasks SET date = ?, time = ?, location = ?, task_id = ? WHERE sched_id = ?',
-      [date, time, location, taskId, schedId]
-    );
+      if (taskRows.length === 0) {
+        return res.status(404).json({ message: 'Task not found' });
+      }
 
-    if (result.affectedRows > 0) {
-      res.status(200).json({ message: 'Task updated successfully' });
-    } else {
-      res.status(404).json({ message: 'Task not found' });
+      const taskId = taskRows[0].task_id;
+
+      // Check for duplicates
+      const isDuplicate = await checkDuplicateTask(
+        connection,
+        userId,
+        taskId,
+        date,
+        time,
+        location
+      );
+
+      if (isDuplicate) {
+        return res.status(409).json({ 
+          message: 'A task with these details already exists' 
+        });
+      }
+
+      const [result] = await connection.execute(
+        'INSERT INTO scheduled_tasks (device_id, task_id, date, time, location) VALUES (?, ?, ?, ?, ?)',
+        [userId, taskId, date, time, location]
+      );
+
+      res.status(201).json({ 
+        message: 'Task created successfully', 
+        schedId: result.insertId 
+      });
     }
-  }
 
     // DELETE: Delete a scheduled task
     else if (req.method === 'DELETE') {
@@ -105,7 +198,7 @@ else if (req.method === 'PUT') {
 
     // Unsupported methods
     else {
-      res.setHeader('Allow', ['GET', 'PUT', 'DELETE', 'OPTIONS']);
+      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']);
       res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {
