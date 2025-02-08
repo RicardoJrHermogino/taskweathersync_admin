@@ -111,8 +111,17 @@ const DevicesPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // "YYYY-MM-DD" format
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
   };
+  
 
   const formatSearchDate = (dateString) => {
     const [month, day, year] = dateString.split('/');
@@ -216,8 +225,9 @@ const DevicesPage = () => {
                       </Box>
                     </Tooltip>
                   </TableCell>
-                  <TableCell>{formatDate(device.created_at)}</TableCell>
-                  <TableCell>{formatDate(device.last_active)}</TableCell>
+                    <TableCell>{formatDate(device.created_at)}</TableCell>
+                    <TableCell>{formatDate(device.last_active)}</TableCell>
+
                   <TableCell>
                     <Chip
                       label={device.status}
