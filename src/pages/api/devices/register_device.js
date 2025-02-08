@@ -33,16 +33,11 @@ export default async function handler(req, res) {
 
   let connection;
   try {
+    connection = await mysql.createConnection(dbConfig);
     
-    connection = await mysql.createConnection({
-            ...dbConfig,
-            timezone: '+08:00',
-            dateStrings: false // Important: Don't convert dates to strings
-          });
-          
-          // Set session variables for proper timestamp handling
-          await connection.execute("SET time_zone='+08:00'");
-          await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+    // Enable strict mode and set timezone
+    await connection.execute("SET SESSION sql_mode = 'STRICT_TRANS_TABLES'");
+    await connection.execute("SET time_zone = '+08:00'");
 
     // Check if device already exists - using EXISTS for better performance
     const [existingRows] = await connection.execute(`
