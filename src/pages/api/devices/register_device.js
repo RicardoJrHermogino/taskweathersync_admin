@@ -1,4 +1,3 @@
-// register_device.js
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -6,7 +5,7 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  timezone: '+08:00', // Set connection timezone to PHT
+  timezone: '+08:00',
 };
 
 export default async function handler(req, res) {
@@ -36,8 +35,8 @@ export default async function handler(req, res) {
   let connection;
   try {
     connection = await mysql.createConnection(dbConfig);
-
-    // Set session timezone to Asia/Manila
+    
+    // Set session timezone
     await connection.execute("SET time_zone = '+08:00'");
 
     // Check if device already exists
@@ -47,16 +46,10 @@ export default async function handler(req, res) {
     );
 
     if (existingRows[0].count === 0) {
-      // Insert new device with both created_at and last_active using CONVERT_TZ to ensure Philippine time
-      const currentTimestamp = "CONVERT_TZ(NOW(), @@session.time_zone, '+08:00')";
-      await connection.execute(`
+      // Insert new device using NOW() directly in the query
+      const [result] = await connection.execute(`
         INSERT INTO devices (device_id, created_at, last_active, status) 
-        VALUES (
-          ?, 
-          ${currentTimestamp},
-          ${currentTimestamp}, 
-          ?
-        )`,
+        VALUES (?, NOW(), NOW(), ?)`,
         [deviceId, 'active']
       );
 
@@ -83,7 +76,8 @@ export default async function handler(req, res) {
     }
     return res.status(500).json({
       error: 'Error registering device',
-      details: error.message
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
