@@ -1,4 +1,4 @@
-
+// update_activity.js
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -39,80 +39,65 @@ export default async function handler(req, res) {
 
     let connection;
     try {
-      // Test database connection first
-      console.log('Attempting to connect to database...');
       connection = await mysql.createConnection(dbConfig);
-      console.log('Database connection successful');
-
-      // Set timezone without strict mode initially
-      await connection.execute("SET time_zone='+08:00'");
       
+      // Set timezone at session level
+      await connection.execute("SET time_zone='+08:00'");
+
       // Check if device exists
-      console.log('Checking if device exists:', deviceId);
       const [existingDevice] = await connection.execute(
         'SELECT device_id FROM devices WHERE device_id = ?',
         [deviceId]
       );
 
+      const currentDate = new Date().toISOString().split('T')[0];
+
       if (existingDevice.length === 0) {
-        console.log('Device not found, attempting to register new device');
-        const insertQuery = `
-          INSERT INTO devices (device_id, created_at, last_active, status) 
-          VALUES (?, NOW(), NOW(), 'active')
-        `;
-        
-        await connection.execute(insertQuery, [deviceId]);
-        
-        const [rows] = await connection.execute(
-          'SELECT last_active FROM devices WHERE device_id = ?',
-          [deviceId]
+        console.log('Device not found, registering new device');
+        await connection.execute(
+          'INSERT INTO devices (device_id, created_at, last_active, status) VALUES (?, ?, ?, ?)',
+          [deviceId, currentDate, currentDate, 'active']
         );
         
-        console.log('Device registered successfully');
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
-          timestamp: rows[0].last_active,
+          timestamp: currentDate,
           isNewDevice: true
         });
       }
 
-      console.log('Updating existing device activity');
+      // Update existing device's last_active timestamp and status
       const updateQuery = `
         UPDATE devices 
         SET 
-          last_active = NOW(),
+          last_active = ?,
           status = CASE
-            WHEN DATEDIFF(NOW(), last_active) > 30 THEN 'inactive'
-            WHEN DATEDIFF(NOW(), last_active) > 7 THEN 'idle'
+            WHEN DATEDIFF(?, last_active) > 30 THEN 'inactive'
+            WHEN DATEDIFF(?, last_active) > 7 THEN 'idle'
             ELSE 'active'
           END
         WHERE device_id = ?
       `;
+      
+      console.log('Executing update query for existing device');
+      const [result] = await connection.execute(updateQuery, [
+        currentDate,
+        currentDate,
+        currentDate,
+        deviceId
+      ]);
 
-      await connection.execute(updateQuery, [deviceId]);
-
-      const [rows] = await connection.execute(
-        'SELECT last_active FROM devices WHERE device_id = ?',
-        [deviceId]
-      );
-
-      console.log('Activity updated successfully');
       await connection.end();
       return res.status(200).json({
         message: 'Activity updated successfully',
-        timestamp: rows[0].last_active,
+        timestamp: currentDate,
+        affectedRows: result.affectedRows,
         isNewDevice: false
       });
 
     } catch (error) {
-      console.error('Detailed error:', {
-        message: error.message,
-        code: error.code,
-        sqlState: error.sqlState,
-        sqlMessage: error.sqlMessage
-      });
-      
+      console.error('Database error:', error);
       if (connection) {
         try {
           await connection.end();
@@ -120,13 +105,9 @@ export default async function handler(req, res) {
           console.error('Error closing connection:', closeError);
         }
       }
-      
       return res.status(500).json({
         error: 'Failed to update activity',
-        details: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          code: error.code
-        } : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
