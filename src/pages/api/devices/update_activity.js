@@ -81,9 +81,9 @@ export default async function handler(req, res) {
       if (existingDevice.length === 0) {
         console.log('Device not found, registering new device');
         await connection.execute(insertQuery, [deviceId, 'active']);
-        
+      
         const [rows] = await connection.execute(selectQuery, [deviceId]);
-        
+      
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
@@ -91,6 +91,7 @@ export default async function handler(req, res) {
           isNewDevice: true
         });
       }
+      
 
       console.log('Executing update query for existing device');
       await connection.execute(updateQuery, [deviceId]);
