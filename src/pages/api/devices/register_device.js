@@ -49,9 +49,10 @@ export default async function handler(req, res) {
     if (!existingRows[0].exists_count) {
       // Only specify device_id and let MySQL handle the defaults
       const [result] = await connection.execute(
-        'INSERT INTO devices (device_id) VALUES (?)',
+        `INSERT INTO devices (device_id, created_at, last_active) VALUES (?, NOW(), NOW())`,
         [deviceId]
       );
+      
 
       await connection.end();
       return res.status(201).json({
