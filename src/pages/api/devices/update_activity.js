@@ -1,3 +1,5 @@
+api/update_activity
+
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -41,9 +43,10 @@ export default async function handler(req, res) {
       connection = await mysql.createConnection({
         ...dbConfig,
         timezone: '+08:00',
-        dateStrings: false
+        dateStrings: false // Important: Don't convert dates to strings
       });
       
+      // Set session variables for proper timestamp handling
       await connection.execute("SET time_zone='+08:00'");
       await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
 
@@ -70,39 +73,37 @@ export default async function handler(req, res) {
         WHERE device_id = ?
       `;
 
-      // Modified SELECT query to format the timestamp
-      const selectQuery = `
-        SELECT 
-          DATE_FORMAT(last_active, '%Y-%m-%d %H:%i:%s') as formatted_timestamp
-        FROM devices 
-        WHERE device_id = ?
-      `;
-
       if (existingDevice.length === 0) {
         console.log('Device not found, registering new device');
         await connection.execute(insertQuery, [deviceId, 'active']);
-      
-        const [rows] = await connection.execute(selectQuery, [deviceId]);
-      
+        
+        // Get the inserted timestamp
+        const [rows] = await connection.execute(
+          'SELECT last_active FROM devices WHERE device_id = ?',
+          [deviceId]
+        );
+        
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
-          timestamp: rows[0].formatted_timestamp,
+          timestamp: rows[0].last_active,
           isNewDevice: true
         });
       }
-      
 
       console.log('Executing update query for existing device');
       await connection.execute(updateQuery, [deviceId]);
 
-      const [rows] = await connection.execute(selectQuery, [deviceId]);
-      console.log('Retrieved timestamp:', rows[0].formatted_timestamp); // Debug log
+      // Get the updated timestamp
+      const [rows] = await connection.execute(
+        'SELECT last_active FROM devices WHERE device_id = ?',
+        [deviceId]
+      );
 
       await connection.end();
       return res.status(200).json({
         message: 'Activity updated successfully',
-        timestamp: rows[0].formatted_timestamp,
+        timestamp: rows[0].last_active,
         isNewDevice: false
       });
 
