@@ -1,4 +1,3 @@
-api/update_activity
 
 import mysql from 'mysql2/promise';
 
