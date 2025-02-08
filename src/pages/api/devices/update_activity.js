@@ -38,15 +38,10 @@ export default async function handler(req, res) {
 
     let connection;
     try {
-      connection = await mysql.createConnection({
-        ...dbConfig,
-        timezone: '+08:00',
-        dateStrings: false // Important: Don't convert dates to strings
-      });
+      connection = await mysql.createConnection(dbConfig);
       
-      // Set session variables for proper timestamp handling
+      // Set timezone at session level
       await connection.execute("SET time_zone='+08:00'");
-      await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
 
       // Check if device exists
       const [existingDevice] = await connection.execute(
@@ -54,18 +49,19 @@ export default async function handler(req, res) {
         [deviceId]
       );
 
+      // Let MySQL handle the current timestamp directly
       const insertQuery = `
         INSERT INTO devices (device_id, created_at, last_active, status) 
-        VALUES (?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), ?)
+        VALUES (?, NOW(), NOW(), ?)
       `;
 
       const updateQuery = `
         UPDATE devices 
         SET 
-          last_active = CURRENT_TIMESTAMP(6),
+          last_active = NOW(),
           status = CASE
-            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 30 THEN 'inactive'
-            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 7 THEN 'idle'
+            WHEN TIMESTAMPDIFF(DAY, last_active, NOW()) > 30 THEN 'inactive'
+            WHEN TIMESTAMPDIFF(DAY, last_active, NOW()) > 7 THEN 'idle'
             ELSE 'active'
           END
         WHERE device_id = ?
