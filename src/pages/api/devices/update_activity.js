@@ -39,49 +39,36 @@ export default async function handler(req, res) {
 
     let connection;
     try {
-      connection = await mysql.createConnection({
-        ...dbConfig,
-        timezone: '+08:00',
-        dateStrings: false // Important: Don't convert dates to strings
-      });
-      
-      // Set session variables for proper timestamp handling
-      await connection.execute("SET time_zone='+08:00'");
-      await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+      // Test database connection first
+      console.log('Attempting to connect to database...');
+      connection = await mysql.createConnection(dbConfig);
+      console.log('Database connection successful');
 
+      // Set timezone without strict mode initially
+      await connection.execute("SET time_zone='+08:00'");
+      
       // Check if device exists
+      console.log('Checking if device exists:', deviceId);
       const [existingDevice] = await connection.execute(
         'SELECT device_id FROM devices WHERE device_id = ?',
         [deviceId]
       );
 
-      const insertQuery = `
-        INSERT INTO devices (device_id, created_at, last_active, status) 
-        VALUES (?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), ?)
-      `;
-
-      const updateQuery = `
-        UPDATE devices 
-        SET 
-          last_active = CURRENT_TIMESTAMP(6),
-          status = CASE
-            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 30 THEN 'inactive'
-            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 7 THEN 'idle'
-            ELSE 'active'
-          END
-        WHERE device_id = ?
-      `;
-
       if (existingDevice.length === 0) {
-        console.log('Device not found, registering new device');
-        await connection.execute(insertQuery, [deviceId, 'active']);
+        console.log('Device not found, attempting to register new device');
+        const insertQuery = `
+          INSERT INTO devices (device_id, created_at, last_active, status) 
+          VALUES (?, NOW(), NOW(), 'active')
+        `;
         
-        // Get the inserted timestamp
+        await connection.execute(insertQuery, [deviceId]);
+        
         const [rows] = await connection.execute(
           'SELECT last_active FROM devices WHERE device_id = ?',
           [deviceId]
         );
         
+        console.log('Device registered successfully');
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
@@ -90,15 +77,27 @@ export default async function handler(req, res) {
         });
       }
 
-      console.log('Executing update query for existing device');
+      console.log('Updating existing device activity');
+      const updateQuery = `
+        UPDATE devices 
+        SET 
+          last_active = NOW(),
+          status = CASE
+            WHEN DATEDIFF(NOW(), last_active) > 30 THEN 'inactive'
+            WHEN DATEDIFF(NOW(), last_active) > 7 THEN 'idle'
+            ELSE 'active'
+          END
+        WHERE device_id = ?
+      `;
+
       await connection.execute(updateQuery, [deviceId]);
 
-      // Get the updated timestamp
       const [rows] = await connection.execute(
         'SELECT last_active FROM devices WHERE device_id = ?',
         [deviceId]
       );
 
+      console.log('Activity updated successfully');
       await connection.end();
       return res.status(200).json({
         message: 'Activity updated successfully',
@@ -107,7 +106,13 @@ export default async function handler(req, res) {
       });
 
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('Detailed error:', {
+        message: error.message,
+        code: error.code,
+        sqlState: error.sqlState,
+        sqlMessage: error.sqlMessage
+      });
+      
       if (connection) {
         try {
           await connection.end();
@@ -115,9 +120,13 @@ export default async function handler(req, res) {
           console.error('Error closing connection:', closeError);
         }
       }
+      
       return res.status(500).json({
         error: 'Failed to update activity',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error.message,
+          code: error.code
+        } : undefined
       });
     }
   }
