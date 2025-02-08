@@ -36,21 +36,21 @@ export default async function handler(req, res) {
   try {
     connection = await mysql.createConnection(dbConfig);
     
-    // Set session timezone
+    // Enable strict mode and set timezone
+    await connection.execute("SET SESSION sql_mode = 'STRICT_TRANS_TABLES'");
     await connection.execute("SET time_zone = '+08:00'");
 
-    // Check if device already exists
-    const [existingRows] = await connection.execute(
-      'SELECT COUNT(*) as count FROM devices WHERE device_id = ?',
+    // Check if device already exists - using EXISTS for better performance
+    const [existingRows] = await connection.execute(`
+      SELECT EXISTS(SELECT 1 FROM devices WHERE device_id = ?) as exists_count`,
       [deviceId]
     );
 
-    if (existingRows[0].count === 0) {
-      // Insert new device using NOW() directly in the query
-      const [result] = await connection.execute(`
-        INSERT INTO devices (device_id, created_at, last_active, status) 
-        VALUES (?, NOW(), NOW(), ?)`,
-        [deviceId, 'active']
+    if (!existingRows[0].exists_count) {
+      // Only specify device_id and let MySQL handle the defaults
+      const [result] = await connection.execute(
+        'INSERT INTO devices (device_id) VALUES (?)',
+        [deviceId]
       );
 
       await connection.end();
@@ -71,13 +71,24 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Error registering device:', error);
+    // Log the full error details server-side
+    console.error('Full error:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
+    
     if (connection) {
       await connection.end();
     }
+    
     return res.status(500).json({
       error: 'Error registering device',
       details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      code: error.code,
+      sqlState: error.sqlState
     });
   }
 }
