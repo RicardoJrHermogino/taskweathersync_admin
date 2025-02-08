@@ -38,10 +38,14 @@ export default async function handler(req, res) {
 
     let connection;
     try {
-      connection = await mysql.createConnection(dbConfig);
+      connection = await mysql.createConnection({
+        ...dbConfig,
+        timezone: '+08:00',
+        dateStrings: false
+      });
       
-      // Set timezone at session level
       await connection.execute("SET time_zone='+08:00'");
+      await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
 
       // Check if device exists
       const [existingDevice] = await connection.execute(
@@ -49,21 +53,28 @@ export default async function handler(req, res) {
         [deviceId]
       );
 
-      // Let MySQL handle the current timestamp directly
       const insertQuery = `
         INSERT INTO devices (device_id, created_at, last_active, status) 
-        VALUES (?, NOW(), NOW(), ?)
+        VALUES (?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), ?)
       `;
 
       const updateQuery = `
         UPDATE devices 
         SET 
-          last_active = NOW(),
+          last_active = CURRENT_TIMESTAMP(6),
           status = CASE
-            WHEN TIMESTAMPDIFF(DAY, last_active, NOW()) > 30 THEN 'inactive'
-            WHEN TIMESTAMPDIFF(DAY, last_active, NOW()) > 7 THEN 'idle'
+            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 30 THEN 'inactive'
+            WHEN TIMESTAMPDIFF(DAY, last_active, CURRENT_TIMESTAMP(6)) > 7 THEN 'idle'
             ELSE 'active'
           END
+        WHERE device_id = ?
+      `;
+
+      // Modified SELECT query to format the timestamp
+      const selectQuery = `
+        SELECT 
+          DATE_FORMAT(last_active, '%Y-%m-%d %H:%i:%s') as formatted_timestamp
+        FROM devices 
         WHERE device_id = ?
       `;
 
@@ -71,16 +82,12 @@ export default async function handler(req, res) {
         console.log('Device not found, registering new device');
         await connection.execute(insertQuery, [deviceId, 'active']);
         
-        // Get the inserted timestamp
-        const [rows] = await connection.execute(
-          'SELECT last_active FROM devices WHERE device_id = ?',
-          [deviceId]
-        );
+        const [rows] = await connection.execute(selectQuery, [deviceId]);
         
         await connection.end();
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
-          timestamp: rows[0].last_active,
+          timestamp: rows[0].formatted_timestamp,
           isNewDevice: true
         });
       }
@@ -88,16 +95,13 @@ export default async function handler(req, res) {
       console.log('Executing update query for existing device');
       await connection.execute(updateQuery, [deviceId]);
 
-      // Get the updated timestamp
-      const [rows] = await connection.execute(
-        'SELECT last_active FROM devices WHERE device_id = ?',
-        [deviceId]
-      );
+      const [rows] = await connection.execute(selectQuery, [deviceId]);
+      console.log('Retrieved timestamp:', rows[0].formatted_timestamp); // Debug log
 
       await connection.end();
       return res.status(200).json({
         message: 'Activity updated successfully',
-        timestamp: rows[0].last_active,
+        timestamp: rows[0].formatted_timestamp,
         isNewDevice: false
       });
 
