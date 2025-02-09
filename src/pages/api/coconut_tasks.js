@@ -1,4 +1,3 @@
-// pages/api/coconut_tasks.js
 import mysql from 'mysql2/promise';
 
 const dbConfig = {
@@ -44,7 +43,10 @@ export default async function getCoconutTasksHandler(req, res) {
         return res.status(404).json({ message: 'Task not found' });
       }
 
-      res.status(200).json(task_id ? rows[0] : rows);
+      // Wrap the response in a coconut_tasks property to match frontend expectations
+      res.status(200).json({
+        coconut_tasks: task_id ? [rows[0]] : rows
+      });
     } else {
       res.status(405).json({ message: 'Method not allowed' });
     }
