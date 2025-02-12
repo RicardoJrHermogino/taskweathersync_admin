@@ -58,12 +58,12 @@ export default async function handler(req, res) {
       }
     
       const [rows] = await connection.execute(
-        `SELECT st.sched_id, st.task_id, st.device_id, st.location, st.date, st.time, ct.task_name 
-         FROM scheduled_tasks st
-         JOIN coconut_tasks ct ON st.task_id = ct.task_id
-         WHERE st.device_id = ?
-         ORDER BY st.sched_id DESC`,  // Added sorting by sched_id in descending order
-        [deviceId]
+        `SELECT st.sched_id, st.task_id, st.device_id, st.location, st.lat, st.lon, st.date, st.time, ct.task_name 
+          FROM scheduled_tasks st
+          JOIN coconut_tasks ct ON st.task_id = ct.task_id
+          WHERE st.device_id = ?
+          ORDER BY st.sched_id DESC`,  // Added sorting by sched_id in descending order
+          [deviceId]
       );
     
       res.status(200).json(rows);
