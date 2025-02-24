@@ -1,4 +1,5 @@
-import mysql from 'mysql2/promise';
+import pool from '@/lib/db';
+
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -8,47 +9,56 @@ const dbConfig = {
 };
 
 // Helper function to check for duplicate tasks
-async function checkDuplicateTask(connection, deviceId, taskId, date, time, location, excludeSchedId = null) {
-  let query = `
-    SELECT COUNT(*) as count 
-    FROM scheduled_tasks 
-    WHERE device_id = ? 
-    AND task_id = ? 
-    AND date = ? 
-    AND time = ? 
-    AND location = ?`;
-  
-  const params = [deviceId, taskId, date, time, location];
-  
-  if (excludeSchedId) {
-    query += ' AND sched_id != ?';
-    params.push(excludeSchedId);
-  }
+async function checkDuplicateTask(deviceId, taskId, date, time, location, excludeSchedId = null) {
+  let connection;
+  try {
+    connection = await pool.getConnection(); // Get a connection from the pool
 
-  const [rows] = await connection.execute(query, params);
-  return rows[0].count > 0;
+    let query = `
+      SELECT COUNT(*) as count 
+      FROM scheduled_tasks 
+      WHERE device_id = ? 
+      AND task_id = ? 
+      AND date = ? 
+      AND time = ? 
+      AND location = ?`;
+    
+    const params = [deviceId, taskId, date, time, location];
+    
+    if (excludeSchedId) {
+      query += ' AND sched_id != ?';
+      params.push(excludeSchedId);
+    }
+
+    const [rows] = await connection.execute(query, params);
+    return rows[0].count > 0;
+  } catch (error) {
+    console.error('Error in checkDuplicateTask:', error);
+    return false;
+  } finally {
+    if (connection) connection.release(); // Release the connection back to the pool
+  }
 }
 
 export default async function handler(req, res) {
   let connection;
 
   try {
-    // Establish the database connection
-    connection = await mysql.createConnection(dbConfig);
+    connection = await pool.getConnection(); // Get a connection from the pool
 
-      // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
 
     // GET: Fetch tasks
     if (req.method === 'GET') {
@@ -62,8 +72,8 @@ export default async function handler(req, res) {
           FROM scheduled_tasks st
           JOIN coconut_tasks ct ON st.task_id = ct.task_id
           WHERE st.device_id = ?
-          ORDER BY st.sched_id DESC`,  // Added sorting by sched_id in descending order
-          [deviceId]
+          ORDER BY st.sched_id DESC`,  // Sort by latest tasks
+        [deviceId]
       );
     
       res.status(200).json(rows);
@@ -77,7 +87,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Scheduled Task ID is required' });
       }
 
-      // Get task_id and device_id
+      // Get task_id
       const [taskRows] = await connection.execute(
         'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
         [taskName]
@@ -89,7 +99,7 @@ export default async function handler(req, res) {
 
       const taskId = taskRows[0].task_id;
 
-      // Get device_id for the scheduled task
+      // Get device_id
       const [schedRows] = await connection.execute(
         'SELECT device_id FROM scheduled_tasks WHERE sched_id = ?',
         [schedId]
@@ -101,21 +111,10 @@ export default async function handler(req, res) {
 
       const deviceId = schedRows[0].device_id;
 
-      // Check for duplicates, excluding the current task
-      const isDuplicate = await checkDuplicateTask(
-        connection, 
-        deviceId, 
-        taskId, 
-        date, 
-        time, 
-        location, 
-        schedId
-      );
-
+      // Check for duplicates
+      const isDuplicate = await checkDuplicateTask(deviceId, taskId, date, time, location, schedId);
       if (isDuplicate) {
-        return res.status(409).json({ 
-          message: 'A task with these details already exists' 
-        });
+        return res.status(409).json({ message: 'A task with these details already exists' });
       }
 
       const [result] = await connection.execute(
@@ -123,17 +122,15 @@ export default async function handler(req, res) {
         [date, time, location, taskId, schedId]
       );
 
-      if (result.affectedRows > 0) {
-        res.status(200).json({ message: 'Task updated successfully' });
-      } else {
-        res.status(404).json({ message: 'Task not found' });
-      }
+      res.status(result.affectedRows > 0 ? 200 : 404).json({
+        message: result.affectedRows > 0 ? 'Task updated successfully' : 'Task not found'
+      });
     }
+
     // POST: Create a new scheduled task
     else if (req.method === 'POST') {
       const { userId, task_name, date, time, location } = req.body;
 
-      // Get task_id
       const [taskRows] = await connection.execute(
         'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
         [task_name]
@@ -145,20 +142,9 @@ export default async function handler(req, res) {
 
       const taskId = taskRows[0].task_id;
 
-      // Check for duplicates
-      const isDuplicate = await checkDuplicateTask(
-        connection,
-        userId,
-        taskId,
-        date,
-        time,
-        location
-      );
-
+      const isDuplicate = await checkDuplicateTask(userId, taskId, date, time, location);
       if (isDuplicate) {
-        return res.status(409).json({ 
-          message: 'A task with these details already exists' 
-        });
+        return res.status(409).json({ message: 'A task with these details already exists' });
       }
 
       const [result] = await connection.execute(
@@ -166,10 +152,7 @@ export default async function handler(req, res) {
         [userId, taskId, date, time, location]
       );
 
-      res.status(201).json({ 
-        message: 'Task created successfully', 
-        schedId: result.insertId 
-      });
+      res.status(201).json({ message: 'Task created successfully', schedId: result.insertId });
     }
 
     // DELETE: Delete a scheduled task
@@ -185,11 +168,9 @@ export default async function handler(req, res) {
         [schedId]
       );
 
-      if (result.affectedRows > 0) {
-        res.status(200).json({ message: 'Task deleted successfully' });
-      } else {
-        res.status(404).json({ message: 'Task not found' });
-      }
+      res.status(result.affectedRows > 0 ? 200 : 404).json({
+        message: result.affectedRows > 0 ? 'Task deleted successfully' : 'Task not found'
+      });
     }
 
     // Unsupported methods
@@ -201,8 +182,6 @@ export default async function handler(req, res) {
     console.error('Error:', error.message || error);
     res.status(500).json({ message: 'Internal server error' });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) connection.release(); // Release the connection back to the pool
   }
 }
