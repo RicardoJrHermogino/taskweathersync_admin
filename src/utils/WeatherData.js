@@ -1,30 +1,23 @@
-import mysql from 'mysql2/promise';
+import pool from '@/lib/db';
 
 class WeatherData {
-  constructor(dbConfig) {
-    this.dbConfig = dbConfig;
-  }
-
-  async connect() {
-    return await mysql.createConnection(this.dbConfig);
-  }
-
   async clearAndInsertWeatherData(weatherData) {
-    const connection = await this.connect();
-
+    let connection;
     try {
-      // First, delete existing weather data from the table
+      connection = await pool.getConnection(); // Get a connection from the pool
+
+      // Delete existing weather data from the table
       const deleteQuery = 'DELETE FROM forecast_data';
       await connection.query(deleteQuery);
       console.log('Existing weather data cleared.');
 
-      // Now insert the new weather data
+      // Insert the new weather data
       const insertQuery = `
         INSERT INTO forecast_data 
         (location, lat, lon, date, time, temperature, weather_id, pressure, humidity, clouds, wind_speed, wind_gust, pop, rain_3h)
         VALUES ?
       `;
-      
+
       const values = weatherData.map(item => [
         item.location,
         item.lat,
@@ -47,7 +40,9 @@ class WeatherData {
     } catch (error) {
       console.error('Error handling weather data:', error);
     } finally {
-      await connection.end();
+      if (connection) {
+        connection.release(); // Release the connection back to the pool
+      }
     }
   }
 }
