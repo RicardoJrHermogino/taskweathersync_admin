@@ -1,16 +1,10 @@
-import mysql from 'mysql2/promise';
+import pool from '@/lib/db';
 
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
-
-export default async function getCoconutTasksHandler(req, res) {
+export default async function handler(req, res) {
   let connection;
+
   try {
-    connection = await mysql.createConnection(dbConfig);
+    connection = await pool.getConnection(); // Use connection pool
 
     // CORS headers
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -43,56 +37,20 @@ export default async function getCoconutTasksHandler(req, res) {
         return res.status(404).json({ message: 'Task not found' });
       }
 
-      // Wrap the response in a coconut_tasks property to match frontend expectations
       res.status(200).json({
         coconut_tasks: task_id ? [rows[0]] : rows
       });
     } else {
-      res.status(405).json({ message: 'Method not allowed' });
+      res.setHeader('Allow', ['GET', 'OPTIONS']);
+      res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {
     console.error('Error in getCoconutTasks API:', error);
-    res.status(500).json({ 
-      message: 'Internal server error', 
-      error: error.message 
+    res.status(500).json({
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) connection.release(); // Release connection back to the pool
   }
 }
-
-
-
-// import Tasks from '../../lib/Tasks';
-
-// export default async function coconutHandler(req, res) {
-//    // CORS headers
-//   res.setHeader('Access-Control-Allow-Credentials', 'true');
-//   res.setHeader('Access-Control-Allow-Origin', '*');
-//   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-//   res.setHeader(
-//     'Access-Control-Allow-Headers',
-//     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-//   );
-
-//   // Handle preflight requests
-//   if (req.method === 'OPTIONS') {
-//     return res.status(200).end();
-//   }
-
-    
-//     // Handle preflight requests
-//   if (req.method === 'GET') {
-//     try {
-//       const tasks = await Tasks.getAllTasks();
-//       res.status(200).json({ coconut_tasks: tasks });
-//     } catch (error) {
-//       console.error('Error fetching tasks:', error);
-//       res.status(500).json({ message: 'Error fetching tasks', error: error.message });
-//     }
-//   } else {
-//     res.status(405).json({ message: 'Method Not Allowed' });
-//   }
-// }
