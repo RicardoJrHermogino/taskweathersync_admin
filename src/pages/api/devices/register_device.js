@@ -1,12 +1,4 @@
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  timezone: '+08:00',
-};
+import pool from '@/lib/db';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -19,8 +11,7 @@ export default async function handler(req, res) {
   );
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
@@ -34,27 +25,27 @@ export default async function handler(req, res) {
 
   let connection;
   try {
-    connection = await mysql.createConnection(dbConfig);
-    
+    connection = await pool.getConnection(); // Use connection pool
+
     // Enable strict mode and set timezone
     await connection.execute("SET SESSION sql_mode = 'STRICT_TRANS_TABLES'");
     await connection.execute("SET time_zone = '+08:00'");
 
-    // Check if device already exists - using EXISTS for better performance
-    const [existingRows] = await connection.execute(`
-      SELECT EXISTS(SELECT 1 FROM devices WHERE device_id = ?) as exists_count`,
+    // Check if device exists (EXISTS improves performance)
+    const [existingRows] = await connection.execute(
+      `SELECT EXISTS(SELECT 1 FROM devices WHERE device_id = ?) AS exists_count`,
       [deviceId]
     );
 
     if (!existingRows[0].exists_count) {
-      // Insert new device with status field
-      const [result] = await connection.execute(
+      // Insert new device
+      await connection.execute(
         `INSERT INTO devices (device_id, created_at, last_active, status) 
          VALUES (?, NOW(), NOW(), ?)`,
         [deviceId, status]
       );
 
-      await connection.end();
+      connection.release();
       return res.status(201).json({
         message: 'Device registered successfully',
         deviceId,
@@ -63,7 +54,7 @@ export default async function handler(req, res) {
         timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })
       });
     } else {
-      // Update last_active timestamp for existing device
+      // Update last_active timestamp
       await connection.execute(
         `UPDATE devices SET last_active = NOW() WHERE device_id = ?`,
         [deviceId]
@@ -75,7 +66,7 @@ export default async function handler(req, res) {
         [deviceId]
       );
 
-      await connection.end();
+      connection.release();
       return res.status(200).json({
         message: 'Device already exists',
         deviceId,
@@ -86,19 +77,11 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('Error registering device:', error);
-    // Log the full error details server-side
-    console.error('Full error:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage
-    });
-    
+
     if (connection) {
-      await connection.end();
+      connection.release();
     }
-    
+
     return res.status(500).json({
       error: 'Error registering device',
       details: error.message,
