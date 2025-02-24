@@ -1,31 +1,24 @@
 // pages/api/getWeatherData.js
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
+import pool from '@/lib/db';
 
 export default async function getWeatherDataHandler(req, res) {
   let connection;
   try {
-    connection = await mysql.createConnection(dbConfig);
+    connection = await pool.getConnection(); // Use connection from pool
 
     // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
 
     if (req.method === 'GET') {
       const { weather_data_id } = req.query;
@@ -35,7 +28,6 @@ export default async function getWeatherDataHandler(req, res) {
       let query = 'SELECT * FROM forecast_data';
       const queryParams = [];
 
-      // If weather_data_id is provided, modify the query to get only the specific entry
       if (weather_data_id) {
         query += ' WHERE weather_data_id = ?';
         queryParams.push(weather_data_id);
@@ -43,10 +35,8 @@ export default async function getWeatherDataHandler(req, res) {
 
       const [rows] = await connection.query(query, queryParams);
 
-      // Log the rows for debugging
       console.log('Query Results:', rows);
 
-      // If a specific ID was requested but no rows found
       if (weather_data_id && rows.length === 0) {
         return res.status(404).json({ message: 'Weather data not found' });
       }
@@ -68,7 +58,7 @@ export default async function getWeatherDataHandler(req, res) {
     });
   } finally {
     if (connection) {
-      await connection.end();
+      connection.release(); // Release connection back to the pool
     }
   }
 }
