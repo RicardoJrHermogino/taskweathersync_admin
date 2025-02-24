@@ -1,12 +1,4 @@
-
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
+import pool from '@/lib/db';
 
 export default async function handler(req, res) {
   console.log('Received request:', {
@@ -30,24 +22,16 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const { deviceId } = req.body;
-    
+
     console.log('Received deviceId:', deviceId);
-    
+
     if (!deviceId) {
       return res.status(400).json({ error: 'Device ID is required' });
     }
 
     let connection;
     try {
-      connection = await mysql.createConnection({
-        ...dbConfig,
-        timezone: '+08:00',
-        dateStrings: false // Important: Don't convert dates to strings
-      });
-      
-      // Set session variables for proper timestamp handling
-      await connection.execute("SET time_zone='+08:00'");
-      await connection.execute("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
+      connection = await pool.getConnection(); // Use connection pool
 
       // Check if device exists
       const [existingDevice] = await connection.execute(
@@ -75,14 +59,14 @@ export default async function handler(req, res) {
       if (existingDevice.length === 0) {
         console.log('Device not found, registering new device');
         await connection.execute(insertQuery, [deviceId, 'active']);
-        
+
         // Get the inserted timestamp
         const [rows] = await connection.execute(
           'SELECT last_active FROM devices WHERE device_id = ?',
           [deviceId]
         );
-        
-        await connection.end();
+
+        connection.release(); // Release connection back to the pool
         return res.status(201).json({
           message: 'Device registered and activity updated successfully',
           timestamp: rows[0].last_active,
@@ -99,7 +83,7 @@ export default async function handler(req, res) {
         [deviceId]
       );
 
-      await connection.end();
+      connection.release(); // Release connection back to the pool
       return res.status(200).json({
         message: 'Activity updated successfully',
         timestamp: rows[0].last_active,
@@ -109,11 +93,7 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('Database error:', error);
       if (connection) {
-        try {
-          await connection.end();
-        } catch (closeError) {
-          console.error('Error closing connection:', closeError);
-        }
+        connection.release();
       }
       return res.status(500).json({
         error: 'Failed to update activity',
