@@ -1,11 +1,4 @@
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
+import pool from '@/lib/db';
 
 export default async function checkDeviceHandler(req, res) {
   // CORS headers
@@ -19,8 +12,7 @@ export default async function checkDeviceHandler(req, res) {
 
   // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   // Only allow POST method
@@ -36,30 +28,27 @@ export default async function checkDeviceHandler(req, res) {
 
   let connection;
   try {
-    // Create database connection
-    connection = await mysql.createConnection(dbConfig);
+    // Get connection from pool
+    connection = await pool.getConnection();
 
     // Check if device exists in the database
     const [rows] = await connection.execute(
-      'SELECT COUNT(*) as count FROM devices WHERE device_id = ?', 
+      'SELECT EXISTS(SELECT 1 FROM devices WHERE device_id = ?) AS exists_count', 
       [deviceId]
     );
 
-    // Close the connection
-    await connection.end();
+    connection.release(); // Release connection back to the pool
 
-    // Return whether the device exists
     return res.status(200).json({ 
-      exists: rows[0].count > 0,
+      exists: rows[0].exists_count === 1,
       deviceId 
     });
 
   } catch (error) {
     console.error('Error checking device:', error);
-    
-    // Ensure connection is closed in case of error
+
     if (connection) {
-      await connection.end();
+      connection.release(); // Release connection even in case of error
     }
 
     return res.status(500).json({ 
