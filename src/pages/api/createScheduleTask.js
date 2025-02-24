@@ -1,11 +1,4 @@
-import mysql from 'mysql2/promise';
-
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-};
+import pool from '@/lib/db';
 
 // Helper function to check for duplicate tasks
 async function checkDuplicateTask(connection, deviceId, taskId, date, time, location) {
@@ -26,28 +19,25 @@ export default async function handler(req, res) {
   let connection;
 
   try {
-    // Establish database connection
-    connection = await mysql.createConnection(dbConfig);
+    connection = await pool.getConnection(); // Use connection pool
 
-       // CORS headers
-       res.setHeader('Access-Control-Allow-Credentials', 'true');
-       res.setHeader('Access-Control-Allow-Origin', '*');
-       res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-       res.setHeader(
-         'Access-Control-Allow-Headers',
-         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-       );
-     
-       // Handle preflight requests
-       if (req.method === 'OPTIONS') {
-         return res.status(200).end();
-       }
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
-    // Handle POST request to create scheduled task
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+
     if (req.method === 'POST') {
       const { userId, task_name, date, time, location } = req.body;
 
-      // Validate required fields
       if (!userId || !task_name || !date || !time || !location) {
         return res.status(400).json({
           message: 'Missing required fields',
@@ -55,7 +45,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // Find the task_id corresponding to the task_name
+      // Find task_id for the given task_name
       const [taskRows] = await connection.execute(
         'SELECT task_id FROM coconut_tasks WHERE task_name = ?',
         [task_name]
@@ -78,26 +68,22 @@ export default async function handler(req, res) {
       );
 
       if (isDuplicate) {
-        return res.status(409).json({ 
-          message: 'A task with these details already exists' 
-        });
+        return res.status(409).json({ message: 'A task with these details already exists' });
       }
 
-      // Find the coordinates for the location
+      // Find coordinates for the location
       const [locationRows] = await connection.execute(
         'SELECT lat, lon FROM location_coordinates WHERE location_name = ?',
         [location]
       );
 
-      let lat, lon;
-      if (locationRows.length > 0) {
-        lat = locationRows[0].lat;
-        lon = locationRows[0].lon;
-      } else {
+      if (locationRows.length === 0) {
         return res.status(404).json({ message: 'Location coordinates not found' });
       }
 
-      // Insert the scheduled task with all required fields
+      const { lat, lon } = locationRows[0];
+
+      // Insert scheduled task
       const [result] = await connection.execute(
         `INSERT INTO scheduled_tasks 
          (task_id, device_id, location, lat, lon, date, time) 
@@ -106,7 +92,7 @@ export default async function handler(req, res) {
       );
 
       if (result.affectedRows > 0) {
-        // Fetch the newly created task with task_name for the response
+        // Fetch the newly created task
         const [newTask] = await connection.execute(
           `SELECT st.sched_id, st.task_id, st.device_id, st.location, 
                   st.lat, st.lon, st.date, st.time, ct.task_name 
@@ -134,8 +120,6 @@ export default async function handler(req, res) {
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   } finally {
-    if (connection) {
-      await connection.end();
-    }
+    if (connection) connection.release(); // Release connection back to the pool
   }
 }
