@@ -81,7 +81,7 @@ export default async function handler(req, res) {
     
     // PUT: Update a scheduled task
     else if (req.method === 'PUT') {
-      const { schedId, date, time, location, taskName } = req.body;
+      const { schedId, date, time, location,lat, lon, taskName } = req.body;
 
       if (!schedId) {
         return res.status(400).json({ message: 'Scheduled Task ID is required' });
@@ -118,8 +118,8 @@ export default async function handler(req, res) {
       }
 
       const [result] = await connection.execute(
-        'UPDATE scheduled_tasks SET date = ?, time = ?, location = ?, task_id = ? WHERE sched_id = ?',
-        [date, time, location, taskId, schedId]
+      'UPDATE scheduled_tasks SET date = ?, time = ?, location = ?, task_id = ?, lat = ?, lon = ? WHERE sched_id = ?',
+        [date, time, location, taskId, lat, lon, schedId]  // Add lat, lon parameters
       );
 
       res.status(result.affectedRows > 0 ? 200 : 404).json({
