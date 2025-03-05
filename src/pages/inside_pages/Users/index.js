@@ -18,8 +18,7 @@ import {
   Container,
   Card,
   CardContent,
-  Chip,
-  Grid
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -27,19 +26,13 @@ import {
   CheckCircle as ActiveIcon,
   Block as InactiveIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
 const DevicesPage = () => {
-  const [registrationStartDate, setRegistrationStartDate] = useState(null);
-  const [registrationEndDate, setRegistrationEndDate] = useState(null);
-  const [activeStartDate, setActiveStartDate] = useState(null);
-  const [activeEndDate, setActiveEndDate] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const { data: session, status } = useSession();
@@ -66,13 +59,15 @@ const DevicesPage = () => {
     }
   };
 
-  useEffect(() => {
+   // Trigger status update and fetch devices when page loads
+   useEffect(() => {
     if (status === 'loading') return;
     if (!session) {
       router.push('/');
       return;
     }
 
+    // Update statuses and then fetch devices
     const initializeDevicePage = async () => {
       await updateDeviceStatuses();
       await fetchDevices();
@@ -126,32 +121,28 @@ const DevicesPage = () => {
       hour12: true,
     });
   };
+  
+
+  const formatSearchDate = (dateString) => {
+    const [month, day, year] = dateString.split('/');
+    return ${year}-${month}-${day};
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
 
   const filteredDevices = devices
-    .filter(device => {
-      const deviceRegistrationDate = new Date(device.created_at);
-      const deviceActiveDate = new Date(device.last_active);
+  .filter(device => {
+    if (!searchTerm) return true;
 
-      // Registration date filter
-      const registrationDateInRange = 
-        (!registrationStartDate || deviceRegistrationDate >= registrationStartDate) &&
-        (!registrationEndDate || deviceRegistrationDate <= registrationEndDate);
+    const searchDate = formatSearchDate(searchTerm);
+    const deviceDate = new Date(device.created_at);
+    const formattedDeviceDate = deviceDate.toISOString().split('T')[0];
 
-      // Active date filter
-      const activeDateInRange = 
-        (!activeStartDate || deviceActiveDate >= activeStartDate) &&
-        (!activeEndDate || deviceActiveDate <= activeEndDate);
-
-      return registrationDateInRange && activeDateInRange;
-    })
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  const resetFilters = () => {
-    setRegistrationStartDate(null);
-    setRegistrationEndDate(null);
-    setActiveStartDate(null);
-    setActiveEndDate(null);
-  };
+    return formattedDeviceDate === searchDate;
+  })
+  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (status === 'loading') {
     return (
@@ -191,54 +182,22 @@ const DevicesPage = () => {
           </CardContent>
         </Card>
 
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <Paper sx={{ p: 2, mb: 4 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={5}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <DatePicker
-                    label="Registration Start Date"
-                    value={registrationStartDate}
-                    onChange={(newValue) => setRegistrationStartDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                  <DatePicker
-                    label="Registration End Date"
-                    value={registrationEndDate}
-                    onChange={(newValue) => setRegistrationEndDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={5}>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <DatePicker
-                    label="Active Start Date"
-                    value={activeStartDate}
-                    onChange={(newValue) => setActiveStartDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                  <DatePicker
-                    label="Active End Date"
-                    value={activeEndDate}
-                    onChange={(newValue) => setActiveEndDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                  />
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Button 
-                  variant="contained" 
-                  color="secondary" 
-                  onClick={resetFilters}
-                  fullWidth
-                >
-                  Reset Filters
-                </Button>
-              </Grid>
-            </Grid>
-          </Paper>
-        </LocalizationProvider>
+        <Paper sx={{ p: 2, mb: 4 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search by registration date (MM/DD/YYYY)"
+            value={searchTerm}
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Paper>
 
         <TableContainer component={Paper}>
           <Table>
@@ -262,17 +221,14 @@ const DevicesPage = () => {
                           cursor: 'pointer',
                           '&:hover': { textDecoration: 'underline' }
                         }}
-                        onClick={() => {
-                          navigator.clipboard.writeText(device.device_id);
-                          setSnackbarOpen(true);
-                        }}
+                        onClick={() => navigator.clipboard.writeText(device.device_id)}
                       >
                         {device.device_id}
                       </Box>
                     </Tooltip>
                   </TableCell>
-                  <TableCell>{formatDate(device.created_at)}</TableCell>
-                  <TableCell>{formatDate(device.last_active)}</TableCell>
+                    <TableCell>{formatDate(device.created_at)}</TableCell>
+                    <TableCell>{formatDate(device.last_active)}</TableCell>
 
                   <TableCell>
                     <Chip
