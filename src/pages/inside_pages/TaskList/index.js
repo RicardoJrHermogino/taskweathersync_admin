@@ -85,11 +85,8 @@ const weatherConditions = [
   { id: '502', label: 'Heavy intensity rain', group: 'Rain' },
   { id: '503', label: 'Very heavy rain', group: 'Rain' },
   { id: '504', label: 'Extreme rain', group: 'Rain' },
-  { id: '511', label: 'Freezing rain', group: 'Rain' },
   { id: '520', label: 'Light intensity shower rain', group: 'Rain' },
   { id: '521', label: 'Shower rain', group: 'Rain' },
-  { id: '522', label: 'Heavy intensity shower rain', group: 'Rain' },
-  { id: '531', label: 'Ragged shower rain', group: 'Rain' },
 ];
 
   // First, add this debugging function at the top level
