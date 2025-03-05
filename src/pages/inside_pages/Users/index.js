@@ -10,8 +10,6 @@ import {
   TableHead,
   TableRow,
   Button,
-  TextField,
-  InputAdornment,
   Tooltip,
   Snackbar,
   CircularProgress,
@@ -21,7 +19,8 @@ import {
   Chip
 } from '@mui/material';
 import {
-  Search as SearchIcon,
+  ArrowUpward as AscIcon,
+  ArrowDownward as DescIcon,
   Delete as DeleteIcon,
   CheckCircle as ActiveIcon,
   Block as InactiveIcon
@@ -32,11 +31,11 @@ import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
 const DevicesPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [registrationDate, setRegistrationDate] = useState('');
-  const [activeDate, setActiveDate] = useState('');
+  const [sortByRegDate, setSortByRegDate] = useState(null); // null = no sort, true = asc, false = desc
+  const [sortByActiveDate, setSortByActiveDate] = useState(null);
+
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -63,18 +62,40 @@ const DevicesPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
   };
 
-  const filteredDevices = devices.filter((device) => {
-    const deviceRegDate = formatDate(device.created_at);
-    const deviceActiveDate = formatDate(device.last_active);
-
-    const matchesRegistration = registrationDate ? deviceRegDate === registrationDate : true;
-    const matchesActive = activeDate ? deviceActiveDate === activeDate : true;
-
-    return matchesRegistration && matchesActive;
+  const sortedDevices = [...devices].sort((a, b) => {
+    if (sortByRegDate !== null) {
+      return sortByRegDate
+        ? new Date(a.created_at) - new Date(b.created_at)
+        : new Date(b.created_at) - new Date(a.created_at);
+    }
+    if (sortByActiveDate !== null) {
+      return sortByActiveDate
+        ? new Date(a.last_active) - new Date(b.last_active)
+        : new Date(b.last_active) - new Date(a.last_active);
+    }
+    return 0;
   });
+
+  const toggleSortByRegDate = () => {
+    setSortByRegDate((prev) => (prev === null ? true : !prev));
+    setSortByActiveDate(null); // Reset other sorting
+  };
+
+  const toggleSortByActiveDate = () => {
+    setSortByActiveDate((prev) => (prev === null ? true : !prev));
+    setSortByRegDate(null); // Reset other sorting
+  };
 
   if (status === 'loading') {
     return (
@@ -107,24 +128,14 @@ const DevicesPage = () => {
             </CardContent>
           </Card>
 
-          {/* Filters */}
+          {/* Sorting Buttons */}
           <Paper sx={{ p: 2, mb: 4, display: 'flex', gap: 2 }}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Filter by Registration Date"
-              InputLabelProps={{ shrink: true }}
-              value={registrationDate}
-              onChange={(e) => setRegistrationDate(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              type="date"
-              label="Filter by Last Active Date"
-              InputLabelProps={{ shrink: true }}
-              value={activeDate}
-              onChange={(e) => setActiveDate(e.target.value)}
-            />
+            <Button variant="contained" onClick={toggleSortByRegDate}>
+              Sort by Registration Date {sortByRegDate !== null && (sortByRegDate ? <AscIcon /> : <DescIcon />)}
+            </Button>
+            <Button variant="contained" onClick={toggleSortByActiveDate}>
+              Sort by Last Active {sortByActiveDate !== null && (sortByActiveDate ? <AscIcon /> : <DescIcon />)}
+            </Button>
           </Paper>
 
           <TableContainer component={Paper}>
@@ -139,7 +150,7 @@ const DevicesPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredDevices.map((device) => (
+                {sortedDevices.map((device) => (
                   <TableRow key={device.device_id} hover>
                     <TableCell>
                       <Tooltip title="Click to copy" placement="top">
