@@ -132,7 +132,8 @@ const DevicesPage = () => {
     setSearchTerm(e.target.value);
   };
 
-  const filteredDevices = devices.filter(device => {
+  const filteredDevices = devices
+  .filter(device => {
     if (!searchTerm) return true;
 
     const searchDate = formatSearchDate(searchTerm);
@@ -140,7 +141,8 @@ const DevicesPage = () => {
     const formattedDeviceDate = deviceDate.toISOString().split('T')[0];
 
     return formattedDeviceDate === searchDate;
-  });
+  })
+  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (status === 'loading') {
     return (
