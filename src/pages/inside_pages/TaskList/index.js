@@ -27,33 +27,33 @@ import {
   MenuItem,
   InputLabel,
 } from '@mui/material';
-  import {
-    Delete as DeleteIcon,
-    Edit as EditIcon,
-    Add as AddIcon,
-    Close as CloseIcon,
-    DeviceThermostat as TempIcon,
-    WaterDrop as HumidityIcon,
-    Air as WindIcon,
-    Cloud as CloudIcon,
-    Speed as PressureIcon,
-    History as HistoryIcon,
-  } from '@mui/icons-material';
-  import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-  import Layout from '../components/layout';
-  import { CircularProgress } from '@mui/material';
-  import ProtectedRoute from '../components/protectedRoute';
+import {
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
+  DeviceThermostat as TempIcon,
+  WaterDrop as HumidityIcon,
+  Air as WindIcon,
+  Cloud as CloudIcon,
+  Speed as PressureIcon,
+  History as HistoryIcon,
+} from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Layout from '../components/layout';
+import { CircularProgress } from '@mui/material';
+import ProtectedRoute from '../components/protectedRoute';
 
-  const colors = {
-    primary: '#647CBF',
-    secondary: '#8E9FBF',
-    background: '#F7FAFC',
-    text: '#2D3748',
-    subtext: '#718096',
-    error: '#FC8181',
-    success: '#68D391',
-    warning: '#F6AD55',
-  };
+const colors = {
+  primary: '#647CBF',
+  secondary: '#8E9FBF',
+  background: '#F7FAFC',
+  text: '#2D3748',
+  subtext: '#718096',
+  error: '#FC8181',
+  success: '#68D391',
+  warning: '#F6AD55',
+};
 
 // Updated arrays for dropdown options with specific ranges
 const temperatureOptionsMin = Array.from({ length: 3 }, (_, i) => i + 18); // 18-20°C
@@ -69,41 +69,28 @@ const windGustOptions = Array.from({ length: 161 }, (_, i) => (i / 10).toFixed(1
 const pressureOptionsMin = Array.from({ length: 16 }, (_, i) => i + 1000); // 1000-1015 hPa
 const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 1015-1040 hPa
 
-
-
-  const weatherConditions = [
-    // Clear
-    { id: '800', label: 'Clear sky', group: 'Clear' },
-    
-    // Clouds
-    { id: '801', label: 'Few clouds (11-25%)', group: 'Clouds' },
-    { id: '802', label: 'Scattered clouds (25-50%)', group: 'Clouds' },
-    { id: '803', label: 'Broken clouds (51-84%)', group: 'Clouds' },
-    { id: '804', label: 'Overcast clouds (85-100%)', group: 'Clouds' },
-    
-    // Rain
-    { id: '500', label: 'Light rain', group: 'Rain' },
-    { id: '501', label: 'Moderate rain', group: 'Rain' },
-    { id: '502', label: 'Heavy intensity rain', group: 'Rain' },
-    { id: '503', label: 'Very heavy rain', group: 'Rain' },
-    { id: '504', label: 'Extreme rain', group: 'Rain' },
-    { id: '511', label: 'Freezing rain', group: 'Rain' },
-    { id: '520', label: 'Light intensity shower rain', group: 'Rain' },
-    { id: '521', label: 'Shower rain', group: 'Rain' },
-    { id: '522', label: 'Heavy intensity shower rain', group: 'Rain' },
-    { id: '531', label: 'Ragged shower rain', group: 'Rain' },
-    
-    // Thunderstorm
-    { id: '200', label: 'Thunderstorm with light rain', group: 'Thunderstorm' },
-    { id: '201', label: 'Thunderstorm with rain', group: 'Thunderstorm' },
-    { id: '202', label: 'Thunderstorm with heavy rain', group: 'Thunderstorm' },
-    { id: '211', label: 'Thunderstorm', group: 'Thunderstorm' },
-    { id: '212', label: 'Heavy thunderstorm', group: 'Thunderstorm' },
-    { id: '221', label: 'Ragged thunderstorm', group: 'Thunderstorm' },
-    { id: '230', label: 'Thunderstorm with light drizzle', group: 'Thunderstorm' },
-    { id: '231', label: 'Thunderstorm with drizzle', group: 'Thunderstorm' },
-    { id: '232', label: 'Thunderstorm with heavy drizzle', group: 'Thunderstorm' }
-  ];
+const weatherConditions = [
+  // Clear
+  { id: '800', label: 'Clear sky', group: 'Clear' },
+  
+  // Clouds
+  { id: '801', label: 'Few clouds (11-25%)', group: 'Clouds' },
+  { id: '802', label: 'Scattered clouds (25-50%)', group: 'Clouds' },
+  { id: '803', label: 'Broken clouds (51-84%)', group: 'Clouds' },
+  { id: '804', label: 'Overcast clouds (85-100%)', group: 'Clouds' },
+  
+  // Rain
+  { id: '500', label: 'Light rain', group: 'Rain' },
+  { id: '501', label: 'Moderate rain', group: 'Rain' },
+  { id: '502', label: 'Heavy intensity rain', group: 'Rain' },
+  { id: '503', label: 'Very heavy rain', group: 'Rain' },
+  { id: '504', label: 'Extreme rain', group: 'Rain' },
+  { id: '511', label: 'Freezing rain', group: 'Rain' },
+  { id: '520', label: 'Light intensity shower rain', group: 'Rain' },
+  { id: '521', label: 'Shower rain', group: 'Rain' },
+  { id: '522', label: 'Heavy intensity shower rain', group: 'Rain' },
+  { id: '531', label: 'Ragged shower rain', group: 'Rain' },
+];
 
   // First, add this debugging function at the top level
   const debugWeatherRestrictions = (formRestrictions, conditionId) => {
