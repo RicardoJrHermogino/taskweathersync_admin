@@ -18,7 +18,8 @@ import {
   Container,
   Card,
   CardContent,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -26,30 +27,58 @@ import {
   CheckCircle as ActiveIcon,
   Block as InactiveIcon
 } from '@mui/icons-material';
-import { DatePicker } from '@mui/lab'; // Import MUI Date Picker
-import AdapterDateFns from '@mui/lab/AdapterDateFns';
-import LocalizationProvider from '@mui/lab/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
 const DevicesPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [registrationStartDate, setRegistrationStartDate] = useState(null);
+  const [registrationEndDate, setRegistrationEndDate] = useState(null);
+  const [activeStartDate, setActiveStartDate] = useState(null);
+  const [activeEndDate, setActiveEndDate] = useState(null);
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  // Date filter states
-  const [registrationDate, setRegistrationDate] = useState(null);
-  const [lastActiveDate, setLastActiveDate] = useState(null);
 
   useEffect(() => {
     if (status === 'loading') return;
     if (!session) {
       router.push('/');
     }
+  }, [session, status, router]);
+
+  const updateDeviceStatuses = async () => {
+    try {
+      const res = await fetch('/api/devices/update_status', {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        console.error('Failed to update device statuses');
+      }
+    } catch (error) {
+      console.error('Error updating device statuses', error);
+    }
+  };
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.push('/');
+      return;
+    }
+
+    const initializeDevicePage = async () => {
+      await updateDeviceStatuses();
+      await fetchDevices();
+    };
+
+    initializeDevicePage();
   }, [session, status, router]);
 
   const fetchDevices = async () => {
@@ -98,26 +127,31 @@ const DevicesPage = () => {
     });
   };
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
   const filteredDevices = devices
-    .filter((device) => {
-      if (!searchTerm) return true;
-      return device.device_id.includes(searchTerm);
-    })
-    .filter((device) => {
-      if (!registrationDate) return true;
-      const deviceDate = new Date(device.created_at).toISOString().split('T')[0];
-      return deviceDate === registrationDate.toISOString().split('T')[0];
-    })
-    .filter((device) => {
-      if (!lastActiveDate) return true;
-      const deviceDate = new Date(device.last_active).toISOString().split('T')[0];
-      return deviceDate === lastActiveDate.toISOString().split('T')[0];
+    .filter(device => {
+      const deviceRegistrationDate = new Date(device.created_at);
+      const deviceActiveDate = new Date(device.last_active);
+
+      // Registration date filter
+      const registrationDateInRange = 
+        (!registrationStartDate || deviceRegistrationDate >= registrationStartDate) &&
+        (!registrationEndDate || deviceRegistrationDate <= registrationEndDate);
+
+      // Active date filter
+      const activeDateInRange = 
+        (!activeStartDate || deviceActiveDate >= activeStartDate) &&
+        (!activeEndDate || deviceActiveDate <= activeEndDate);
+
+      return registrationDateInRange && activeDateInRange;
     })
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const resetFilters = () => {
+    setRegistrationStartDate(null);
+    setRegistrationEndDate(null);
+    setActiveStartDate(null);
+    setActiveEndDate(null);
+  };
 
   if (status === 'loading') {
     return (
@@ -133,127 +167,145 @@ const DevicesPage = () => {
 
   return (
     <ProtectedRoute>
-      <Layout>
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between' }}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-                Device Management
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Manage registered devices and their IDs
-              </Typography>
-            </Box>
+    <Layout>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Device Management
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage registered devices and their IDs
+            </Typography>
           </Box>
-
-          <Card sx={{ mb: 4 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Total Registered Devices
-              </Typography>
-              <Typography variant="h3" component="div">
-                {devices.length}
-              </Typography>
-            </CardContent>
-          </Card>
-
-          <Paper sx={{ p: 2, mb: 4 }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search by Device ID"
-              value={searchTerm}
-              onChange={handleSearch}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Paper>
-
-          {/* Date Filters */}
-          <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-              <DatePicker
-                label="Filter by Registration Date"
-                value={registrationDate}
-                onChange={(newValue) => setRegistrationDate(newValue)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
-              />
-              <DatePicker
-                label="Filter by Last Active Date"
-                value={lastActiveDate}
-                onChange={(newValue) => setLastActiveDate(newValue)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
-              />
-            </Box>
-          </LocalizationProvider>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Device ID</TableCell>
-                  <TableCell>Registration Date</TableCell>
-                  <TableCell>Last Active</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredDevices.map((device) => (
-                  <TableRow key={device.device_id} hover>
-                    <TableCell>
-                      <Tooltip title="Click to copy" placement="top">
-                        <Box
-                          component="span"
-                          sx={{
-                            cursor: 'pointer',
-                            '&:hover': { textDecoration: 'underline' }
-                          }}
-                          onClick={() => navigator.clipboard.writeText(device.device_id)}
-                        >
-                          {device.device_id}
-                        </Box>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{formatDate(device.created_at)}</TableCell>
-                    <TableCell>{formatDate(device.last_active)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={device.status}
-                        color={device.status === 'active' ? 'success' : 'error'}
-                        size="small"
-                        icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        color="error"
-                        size="small"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => handleDeleteDevice(device.device_id)}
-                      >
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={2000}
-            onClose={() => setSnackbarOpen(false)}
-            message="Device ID copied to clipboard"
-          />
         </Box>
-      </Layout>
+
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Total Registered Devices
+            </Typography>
+            <Typography variant="h3" component="div">
+              {devices.length}
+            </Typography>
+          </CardContent>
+        </Card>
+
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <Paper sx={{ p: 2, mb: 4 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={5}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <DatePicker
+                    label="Registration Start Date"
+                    value={registrationStartDate}
+                    onChange={(newValue) => setRegistrationStartDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                  <DatePicker
+                    label="Registration End Date"
+                    value={registrationEndDate}
+                    onChange={(newValue) => setRegistrationEndDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={5}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <DatePicker
+                    label="Active Start Date"
+                    value={activeStartDate}
+                    onChange={(newValue) => setActiveStartDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                  <DatePicker
+                    label="Active End Date"
+                    value={activeEndDate}
+                    onChange={(newValue) => setActiveEndDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Button 
+                  variant="contained" 
+                  color="secondary" 
+                  onClick={resetFilters}
+                  fullWidth
+                >
+                  Reset Filters
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+        </LocalizationProvider>
+
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Device ID</TableCell>
+                <TableCell>Registration Date</TableCell>
+                <TableCell>Last Active</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell align="right">Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredDevices.map((device) => (
+                <TableRow key={device.device_id} hover>
+                  <TableCell>
+                    <Tooltip title="Click to copy" placement="top">
+                      <Box
+                        component="span"
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': { textDecoration: 'underline' }
+                        }}
+                        onClick={() => {
+                          navigator.clipboard.writeText(device.device_id);
+                          setSnackbarOpen(true);
+                        }}
+                      >
+                        {device.device_id}
+                      </Box>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>{formatDate(device.created_at)}</TableCell>
+                  <TableCell>{formatDate(device.last_active)}</TableCell>
+
+                  <TableCell>
+                    <Chip
+                      label={device.status}
+                      color={device.status === 'active' ? 'success' : 'error'}
+                      size="small"
+                      icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Button
+                      color="error"
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteDevice(device.device_id)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={2000}
+          onClose={() => setSnackbarOpen(false)}
+          message="Device ID copied to clipboard"
+        />
+      </Box>
+    </Layout>
     </ProtectedRoute>
   );
 };
