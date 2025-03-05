@@ -16,88 +16,28 @@ import {
   Container,
   Card,
   CardContent,
-  Chip,
-  useMediaQuery,
-  useTheme,
-  createTheme,
-  ThemeProvider,
-  IconButton,
-  Grid,
-  Fade
+  Chip
 } from '@mui/material';
 import {
   ArrowUpward as AscIcon,
   ArrowDownward as DescIcon,
   Delete as DeleteIcon,
   CheckCircle as ActiveIcon,
-  Block as InactiveIcon,
-  FilterList as FilterIcon
+  Block as InactiveIcon
 } from '@mui/icons-material';
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
-// Custom Theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#2196f3', // Soft blue
-      light: '#64b5f6',
-      dark: '#1976d2'
-    },
-    background: {
-      default: '#f4f6f8', // Light grayish background
-      paper: '#ffffff'
-    },
-    text: {
-      primary: '#2c3e50', // Deep slate blue
-      secondary: '#607d8b'
-    },
-    action: {
-      hover: 'rgba(33, 150, 243, 0.08)' // Soft blue hover effect
-    }
-  },
-  typography: {
-    fontFamily: 'Inter, Roboto, Arial, sans-serif',
-    h4: {
-      fontWeight: 600,
-      color: '#2c3e50'
-    }
-  },
-  components: {
-    MuiTableRow: {
-      styleOverrides: {
-        root: {
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'scale(1.01)',
-            boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
-          }
-        }
-      }
-    },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 12,
-          boxShadow: '0 6px 15px rgba(33, 150, 243, 0.1)'
-        }
-      }
-    }
-  }
-});
-
 const DevicesPage = () => {
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [sortByRegDate, setSortByRegDate] = useState(null);
+  const [sortByRegDate, setSortByRegDate] = useState(null); // null = no sort, true = asc, false = desc
   const [sortByActiveDate, setSortByActiveDate] = useState(null);
 
   const { data: session, status } = useSession();
   const router = useRouter();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -124,11 +64,12 @@ const DevicesPage = () => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      second: '2-digit',
+      hour12: true,
     });
   };
 
@@ -148,18 +89,18 @@ const DevicesPage = () => {
 
   const toggleSortByRegDate = () => {
     setSortByRegDate((prev) => (prev === null ? true : !prev));
-    setSortByActiveDate(null);
+    setSortByActiveDate(null); // Reset other sorting
   };
 
   const toggleSortByActiveDate = () => {
     setSortByActiveDate((prev) => (prev === null ? true : !prev));
-    setSortByRegDate(null);
+    setSortByRegDate(null); // Reset other sorting
   };
 
   if (status === 'loading') {
     return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress color="primary" />
+      <Container>
+        <CircularProgress />
       </Container>
     );
   }
@@ -169,147 +110,94 @@ const DevicesPage = () => {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <ProtectedRoute>
-        <Layout>
-          <Box sx={{ p: { xs: 1, sm: 3 } }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 'bold', 
-                mb: 3, 
-                textAlign: { xs: 'center', sm: 'left' } 
-              }}
-            >
-              Device Management
-            </Typography>
+    <ProtectedRoute>
+      <Layout>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+            Device Management
+          </Typography>
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card elevation={4} sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="primary">
-                      Total Devices
-                    </Typography>
-                    <Typography variant="h3" color="primary.dark">
-                      {devices.length}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card elevation={4} sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom color="primary">
-                      Active Devices
-                    </Typography>
-                    <Typography variant="h3" color="success.main">
-                      {devices.filter(d => d.status === 'active').length}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
+          <Card sx={{ mb: 4 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Total Registered Devices
+              </Typography>
+              <Typography variant="h3" component="div">
+                {devices.length}
+              </Typography>
+            </CardContent>
+          </Card>
 
-            <Paper 
-              sx={{ 
-                p: 2, 
-                my: 3, 
-                display: 'flex', 
-                flexDirection: { xs: 'column', sm: 'row' }, 
-                gap: 2, 
-                alignItems: 'center' 
-              }}
-            >
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button 
-                  variant="contained" 
-                  startIcon={<FilterIcon />}
-                  onClick={toggleSortByRegDate}
-                >
-                  Reg. Date {sortByRegDate !== null && (sortByRegDate ? <AscIcon /> : <DescIcon />)}
-                </Button>
-                <Button 
-                  variant="contained" 
-                  startIcon={<FilterIcon />}
-                  onClick={toggleSortByActiveDate}
-                >
-                  Last Active {sortByActiveDate !== null && (sortByActiveDate ? <AscIcon /> : <DescIcon />)}
-                </Button>
-              </Box>
-            </Paper>
+          {/* Sorting Buttons */}
+          <Paper sx={{ p: 2, mb: 4, display: 'flex', gap: 2 }}>
+            <Button variant="contained" onClick={toggleSortByRegDate}>
+              Sort by Registration Date {sortByRegDate !== null && (sortByRegDate ? <AscIcon /> : <DescIcon />)}
+            </Button>
+            <Button variant="contained" onClick={toggleSortByActiveDate}>
+              Sort by Last Active {sortByActiveDate !== null && (sortByActiveDate ? <AscIcon /> : <DescIcon />)}
+            </Button>
+          </Paper>
 
-            <Fade in={true}>
-              <TableContainer component={Paper} elevation={4}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Device ID</TableCell>
-                      {!isMobile && <TableCell>Registration Date</TableCell>}
-                      {!isMobile && <TableCell>Last Active</TableCell>}
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedDevices.map((device) => (
-                      <TableRow key={device.device_id} hover>
-                        <TableCell>
-                          <Tooltip title="Click to copy">
-                            <Box
-                              component="span"
-                              sx={{ 
-                                cursor: 'pointer', 
-                                '&:hover': { 
-                                  textDecoration: 'underline',
-                                  color: 'primary.main' 
-                                } 
-                              }}
-                              onClick={() => {
-                                navigator.clipboard.writeText(device.device_id);
-                                setSnackbarOpen(true);
-                              }}
-                            >
-                              {device.device_id}
-                            </Box>
-                          </Tooltip>
-                        </TableCell>
-                        {!isMobile && <TableCell>{formatDate(device.created_at)}</TableCell>}
-                        {!isMobile && <TableCell>{formatDate(device.last_active)}</TableCell>}
-                        <TableCell>
-                          <Chip
-                            label={device.status}
-                            color={device.status === 'active' ? 'success' : 'error'}
-                            size="small"
-                            icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <IconButton 
-                            color="error" 
-                            size="small"
-                            onClick={() => console.log(`Delete ${device.device_id}`)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Fade>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Device ID</TableCell>
+                  <TableCell>Registration Date</TableCell>
+                  <TableCell>Last Active</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedDevices.map((device) => (
+                  <TableRow key={device.device_id} hover>
+                    <TableCell>
+                      <Tooltip title="Click to copy" placement="top">
+                        <Box
+                          component="span"
+                          sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                          onClick={() => navigator.clipboard.writeText(device.device_id)}
+                        >
+                          {device.device_id}
+                        </Box>
+                      </Tooltip>
+                    </TableCell>
+                    <TableCell>{formatDate(device.created_at)}</TableCell>
+                    <TableCell>{formatDate(device.last_active)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={device.status}
+                        color={device.status === 'active' ? 'success' : 'error'}
+                        size="small"
+                        icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        color="error"
+                        size="small"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => console.log(`Delete ${device.device_id}`)}
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-            <Snackbar
-              open={snackbarOpen}
-              autoHideDuration={2000}
-              onClose={() => setSnackbarOpen(false)}
-              message="Device ID copied to clipboard"
-            />
-          </Box>
-        </Layout>
-      </ProtectedRoute>
-    </ThemeProvider>
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={2000}
+            onClose={() => setSnackbarOpen(false)}
+            message="Device ID copied to clipboard"
+          />
+        </Box>
+      </Layout>
+    </ProtectedRoute>
   );
 };
 
