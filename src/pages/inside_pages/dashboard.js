@@ -224,15 +224,6 @@ const Dashboard = () => {
                 onAction={() => router.push('/inside_pages/TaskList')}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <StatCard
-                icon={SpeedIcon}
-                title="System Status"
-                value="Optimal"
-                subtitle="All systems running smoothly"
-                color={colors.success}
-              />
-            </Grid>
           </Grid>
         </Container>
       </Box>
