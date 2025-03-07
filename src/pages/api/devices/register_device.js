@@ -27,9 +27,8 @@ export default async function handler(req, res) {
   try {
     connection = await pool.getConnection(); // Use connection pool
 
-    // Enable strict mode and set timezone
+    // Enable strict mode only, removed timezone setting
     await connection.execute("SET SESSION sql_mode = 'STRICT_TRANS_TABLES'");
-    await connection.execute("SET time_zone = '+08:00'");
 
     // Check if device exists (EXISTS improves performance)
     const [existingRows] = await connection.execute(
@@ -41,7 +40,7 @@ export default async function handler(req, res) {
       // Insert new device
       await connection.execute(
         `INSERT INTO devices (device_id, created_at, last_active, status) 
-         VALUES (?, NOW(), NOW(), ?)`,
+         VALUES (?, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6), ?)`,
         [deviceId, status]
       );
 
@@ -51,12 +50,12 @@ export default async function handler(req, res) {
         deviceId,
         status,
         registered: true,
-        timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+        timestamp: new Date().toISOString() // Return raw ISO timestamp
       });
     } else {
       // Update last_active timestamp
       await connection.execute(
-        `UPDATE devices SET last_active = NOW() WHERE device_id = ?`,
+        `UPDATE devices SET last_active = CURRENT_TIMESTAMP(6) WHERE device_id = ?`,
         [deviceId]
       );
 
@@ -72,7 +71,7 @@ export default async function handler(req, res) {
         deviceId,
         status: deviceData[0].status,
         registered: false,
-        timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+        timestamp: new Date().toISOString() // Return raw ISO timestamp
       });
     }
   } catch (error) {
