@@ -28,8 +28,10 @@ import {
   ArrowDownward as DescIcon,
   Delete as DeleteIcon,
   CheckCircle as ActiveIcon,
-  Block as InactiveIcon
+  Block as InactiveIcon,
+  HourglassEmpty as IdleIcon // Added for "idle" state
 } from '@mui/icons-material';
+
 import Layout from '../components/layout';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
@@ -229,10 +231,21 @@ const formatDate = (dateString) => {
                     <TableCell>
                       <Chip
                         label={device.status}
-                        color={device.status === 'active' ? 'success' : 'error'}
+                        color={
+                          device.status === 'active'
+                            ? 'success'
+                            : device.status === 'idle'
+                            ? 'warning'
+                            : 'error'
+                        }
                         size="small"
-                        icon={device.status === 'active' ? <ActiveIcon /> : <InactiveIcon />}
+                        icon={
+                          device.status === 'active' ? <ActiveIcon /> :
+                          device.status === 'idle' ? <IdleIcon /> :
+                          <InactiveIcon />
+                        }
                       />
+
                     </TableCell>
                     <TableCell align="right">
                       <Button
