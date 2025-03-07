@@ -106,6 +106,8 @@ const weatherConditions = [
     const [sortBy, setSortBy] = useState('updated');
     const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
     const [form, setForm] = useState({
       task_name: '',
       weatherRestrictions: [],
@@ -164,9 +166,18 @@ const weatherConditions = [
     
       if (res.ok) {
         fetchTasks();
+        setSuccessMessage(editId ? 'Task updated successfully!' : 'Task added successfully!');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+        
         handleCloseForm();
       }
     };
+
+    
 
     const handleCloseForm = () => {
       setForm({
@@ -404,23 +415,43 @@ const weatherConditions = [
       if (!validateCurrentStepOnly(activeStep)) {
         return;
       }
-  
+    
       const res = await fetch(`/api/tasks/${editId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-  
+    
       if (res.ok) {
         fetchTasks();
+        setSuccessMessage('Task updated successfully!');
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+        
         handleCloseForm();
       }
     };
-  
 
     const handleDelete = async (id) => {
-      const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchTasks();
+      // Show simple confirmation dialog
+      const confirmed = window.confirm("Are you sure you want to delete this task?");
+      
+      // Only proceed with deletion if user confirmed
+      if (confirmed) {
+        const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          fetchTasks();
+          setSuccessMessage('Task deleted successfully!');
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 3000);
+        }
+      }
     };
 
     const normalizeWeatherRestrictions = (restrictions) => {
@@ -862,6 +893,31 @@ const weatherConditions = [
           )}
         </Box>
       </Dialog>
+      {successMessage && (
+  <Box
+  sx={{
+    position: 'fixed',
+    top: 0, // Position at the very top
+    left: '50%', // Move to center horizontally
+    transform: 'translateX(-50%)', // Adjust to center properly
+    bgcolor: colors.success,
+    color: 'white',
+    p: 2,
+    borderRadius: 1,
+    boxShadow: 3,
+    zIndex: 1300,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 'fit-content', // Adjust width to content size
+    minWidth: '200px', // Set a minimum width for better visibility
+    textAlign: 'center',
+  }}
+>
+  <Typography>{successMessage}</Typography>
+</Box>
+
+)}
         </Container>
       </Box>
     </Layout>
