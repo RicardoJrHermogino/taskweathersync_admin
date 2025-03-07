@@ -16,7 +16,12 @@ import {
   Container,
   Card,
   CardContent,
-  Chip
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle
 } from '@mui/material';
 import {
   ArrowUpward as AscIcon,
@@ -30,11 +35,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
+
 const DevicesPage = () => {
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [sortByRegDate, setSortByRegDate] = useState(null); // null = no sort, true = asc, false = desc
   const [sortByActiveDate, setSortByActiveDate] = useState(null);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  // New state for delete confirmation dialog
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
 
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -59,6 +69,53 @@ const DevicesPage = () => {
   useEffect(() => {
     fetchDevices();
   }, []);
+
+  // Opens the confirmation dialog and sets the device to delete
+  const handleDeleteClick = (deviceId) => {
+    setDeviceToDelete(deviceId);
+    setConfirmDeleteOpen(true);
+  };
+
+  // Cancel delete operation
+  const handleDeleteCancel = () => {
+    setConfirmDeleteOpen(false);
+    setDeviceToDelete(null);
+  };
+
+  // Confirm and execute delete operation
+  const handleDeleteConfirm = async () => {
+    if (deviceToDelete) {
+      await deleteDevice(deviceToDelete);
+      setConfirmDeleteOpen(false);
+      setDeviceToDelete(null);
+    }
+  };
+
+  const deleteDevice = async (deviceId) => {
+    try {
+      const res = await fetch('/api/devices', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ device_id: deviceId }),
+      });
+      
+      if (res.ok) {
+        fetchDevices();
+        setSnackbarMessage("Device deleted successfully");
+        setSnackbarOpen(true);
+      } else {
+        console.error('Failed to delete device');
+        setSnackbarMessage("Failed to delete device");
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('Error deleting device:', error);
+      setSnackbarMessage("Error deleting device");
+      setSnackbarOpen(true);
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -95,6 +152,12 @@ const DevicesPage = () => {
   const toggleSortByActiveDate = () => {
     setSortByActiveDate((prev) => (prev === null ? true : !prev));
     setSortByRegDate(null); // Reset other sorting
+  };
+
+  const copyDeviceId = (deviceId) => {
+    navigator.clipboard.writeText(deviceId);
+    setSnackbarMessage("Device ID copied to clipboard");
+    setSnackbarOpen(true);
   };
 
   if (status === 'loading') {
@@ -157,7 +220,7 @@ const DevicesPage = () => {
                         <Box
                           component="span"
                           sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                          onClick={() => navigator.clipboard.writeText(device.device_id)}
+                          onClick={() => copyDeviceId(device.device_id)}
                         >
                           {device.device_id}
                         </Box>
@@ -178,9 +241,9 @@ const DevicesPage = () => {
                         color="error"
                         size="small"
                         startIcon={<DeleteIcon />}
-                        onClick={() => console.log(`Delete ${device.device_id}`)}
+                        onClick={() => handleDeleteClick(device.device_id)}
                       >
-                        Delete
+                        Delete 
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -189,11 +252,36 @@ const DevicesPage = () => {
             </Table>
           </TableContainer>
 
+          {/* Delete Confirmation Dialog */}
+          <Dialog
+            open={confirmDeleteOpen}
+            onClose={handleDeleteCancel}
+            aria-labelledby="alert-dialog-title"
+            aria-describedby="alert-dialog-description"
+          >
+            <DialogTitle id="alert-dialog-title">
+              {"Confirm Device Deletion"}
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText id="alert-dialog-description">
+                Are you sure you want to delete this device? This action cannot be undone.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleDeleteCancel} color="primary">
+                Cancel
+              </Button>
+              <Button onClick={handleDeleteConfirm} color="error" autoFocus>
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Snackbar
             open={snackbarOpen}
             autoHideDuration={2000}
             onClose={() => setSnackbarOpen(false)}
-            message="Device ID copied to clipboard"
+            message={snackbarMessage}
           />
         </Box>
       </Layout>
