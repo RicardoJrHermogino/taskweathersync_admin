@@ -35,7 +35,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '../components/protectedRoute';
 
-
 const DevicesPage = () => {
   const [devices, setDevices] = useState([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -117,18 +116,8 @@ const DevicesPage = () => {
     }
   };
 
-  const formatDate = (dateString, isCreatedAt = false) => {
-    if (!dateString) return "N/A"; // Handle null values
-  
-    let date = new Date(dateString);
-  
-    // Subtract time only if it's `created_at`
-    if (isCreatedAt) {
-      date.setHours(date.getHours() - 7);
-      date.setMinutes(date.getMinutes() - 55);
-      date.setSeconds(date.getSeconds() - 30);
-    }
-  
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
     return date.toLocaleString('en-US', {
       year: 'numeric',
       month: '2-digit',
@@ -139,7 +128,6 @@ const DevicesPage = () => {
       hour12: true,
     });
   };
-  
 
   const sortedDevices = [...devices].sort((a, b) => {
     if (sortByRegDate !== null) {
@@ -237,7 +225,7 @@ const DevicesPage = () => {
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell>{formatDate(device.created_at, true)}</TableCell>
+                    <TableCell>{formatDate(device.created_at)}</TableCell>
                     <TableCell>{formatDate(device.last_active)}</TableCell>
                     <TableCell>
                       <Chip
