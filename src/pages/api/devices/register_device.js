@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       // Insert new device
       await connection.execute(
         `INSERT INTO devices (device_id, created_at, last_active, status) 
-          VALUES (?, CONVERT_TZ(NOW(), '+00:00', '+08:00'), NOW(), ?)`,
+          VALUES (?, NOW() - INTERVAL 8 HOUR, NOW(), ?)`,
         [deviceId, status]
       );
 
