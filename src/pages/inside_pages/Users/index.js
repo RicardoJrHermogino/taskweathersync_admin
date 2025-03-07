@@ -116,7 +116,18 @@ const DevicesPage = () => {
     }
   };
 
-
+const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    });
+  };
 
   const sortedDevices = [...devices].sort((a, b) => {
     if (sortByRegDate !== null) {
@@ -214,8 +225,8 @@ const DevicesPage = () => {
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell>{(device.created_at)}</TableCell>
-                    <TableCell>{(device.last_active)}</TableCell>
+                    <TableCell>{formatDate(device.created_at)}</TableCell>
+                    <TableCell>{formatDate(device.last_active)}</TableCell>
                     <TableCell>
                       <Chip
                         label={device.status}
