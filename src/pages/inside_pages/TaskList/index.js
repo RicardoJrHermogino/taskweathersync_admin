@@ -63,11 +63,21 @@ const humidityOptionsMin = Array.from({ length: 11 }, (_, i) => i + 60); // 60-7
 const humidityOptionsMax = Array.from({ length: 26 }, (_, i) => i + 70); // 70-95%
 
 // Wind speed options in m/s with one decimal place
-const windSpeedOptions = Array.from({ length: 161 }, (_, i) => (i / 10).toFixed(1)); // 0.0-16.0 m/s
-const windGustOptions = Array.from({ length: 161 }, (_, i) => (i / 10).toFixed(1)); // 0.0-16.0 m/s
+const windSpeedOptions = Array.from({ length: 101 }, (_, i) => (i / 10).toFixed(1)); // 0.0-10.0 m/s
+const windGustOptions = Array.from({ length: 101 }, (_, i) => (i / 10).toFixed(1)); // 0.0-10.0 m/s
 
 const pressureOptionsMin = Array.from({ length: 16 }, (_, i) => i + 1000); // 1000-1015 hPa
 const pressureOptionsMax = Array.from({ length: 26 }, (_, i) => i + 1015); // 1015-1040 hPa
+
+const getCloudCoverDescription = (percentage) => {
+  const value = parseInt(percentage);
+  if (value <= 10) return "Clear sky - Little to no clouds visible";
+  if (value <= 25) return "Few clouds - Mostly sunny conditions";
+  if (value <= 50) return "Scattered clouds - Partly cloudy";
+  if (value <= 75) return "Broken clouds - Mostly cloudy";
+  if (value <= 90) return "Overcast - Very cloudy with some breaks";
+  return "Complete overcast - Sky completely covered";
+};
 
 const weatherConditions = [
   // Clear
@@ -89,6 +99,32 @@ const weatherConditions = [
   { id: '521', label: 'Shower rain', group: 'Rain' },
 ];
 
+const getWindSpeedDescription = (speed) => {
+  const speedNum = parseFloat(speed);
+  if (speedNum < 0.5) return "Calm - Smoke rises vertically";
+  if (speedNum < 1.5) return "Light air - Smoke drift shows wind direction";
+  if (speedNum < 3.3) return "Light breeze - Leaves rustle, wind felt on face";
+  if (speedNum < 5.5) return "Gentle breeze - Leaves and twigs in motion";
+  if (speedNum < 8.0) return "Moderate breeze - Dust and paper raised, small branches move";
+  if (speedNum < 10.7) return "Fresh breeze - Small trees sway";
+  if (speedNum < 13.8) return "Strong breeze - Large branches in motion, umbrella use difficult";
+  if (speedNum >= 13.8) return "Near gale or stronger - Whole trees in motion";
+  return "";
+};
+
+
+const getPressureDescription = (pressure) => {
+  const value = parseInt(pressure);
+  if (value < 1000) return "Very low - Strong storm likely";
+  if (value < 1005) return "Low - Stormy conditions likely";
+  if (value < 1010) return "Moderately low - Unsettled weather";
+  if (value < 1015) return "Slightly low - Changing conditions";
+  if (value < 1020) return "Normal - Fair weather";
+  if (value < 1025) return "Slightly high - Generally good weather";
+  if (value < 1030) return "Moderately high - Very dry, stable conditions";
+  return "Very high - Extremely dry and stable";
+};
+
   // First, add this debugging function at the top level
   const debugWeatherRestrictions = (formRestrictions, conditionId) => {
     console.log('Form Restrictions:', formRestrictions);
@@ -98,6 +134,19 @@ const weatherConditions = [
       conditionType: typeof conditionId
     });
   };
+
+  // Add this humidity description helper function
+  const getHumidityDescription = (humidity) => {
+    const value = parseInt(humidity);
+    if (value < 60) return "Low - The air is dry, moisture evaporates quickly.";
+    if (value < 70) return "Moderate - Some moisture in the air, but still balanced.";
+    if (value < 80) return "High - The air holds a lot of moisture, making it feel damp.";
+    if (value < 85) return "Very high - Excess moisture in the air, making surfaces feel sticky.";
+    if (value < 90) return "Oppressive - The air is almost saturated with moisture, making it hard for sweat to evaporate.";
+    return "Extreme - The air is nearly full of moisture, similar to a rainforest or after heavy rain.";
+  };
+  
+  
 
   export default function TaskManagement() {
     const [tasks, setTasks] = useState([]);
@@ -594,41 +643,51 @@ const weatherConditions = [
                   Humidity Range (%)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Minimum Humidity</InputLabel>
-                    <Select
-                      value={form.idealHumidity_min}
-                      onChange={(e) => setForm({ ...form, idealHumidity_min: e.target.value })}
-                      label="Minimum Humidity"
-                      required
-                    >
-                      <MenuItem value="" disabled>Select Minimum Humidity</MenuItem>
-                      {humidityOptionsMin.map((humidity) => (
-                        <MenuItem key={humidity} value={humidity}>{humidity}%</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth required>
-                    <InputLabel>Maximum Humidity</InputLabel>
-                    <Select
-                      value={form.idealHumidity_max}
-                      onChange={(e) => setForm({ ...form, idealHumidity_max: e.target.value })}
-                      label="Maximum Humidity"
-                      required
-                      error={form.idealHumidity_max <= form.idealHumidity_min}
-                    >
-                      <MenuItem value="" disabled>Select Maximum Humidity</MenuItem>
-                      {humidityOptionsMax.map((humidity) => (
-                        <MenuItem 
-                          key={humidity} 
-                          value={humidity}
-                          disabled={humidity <= form.idealHumidity_min}
-                        >
-                          {humidity}%
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                <FormControl fullWidth required>
+                  <InputLabel>Minimum Humidity</InputLabel>
+                  <Select
+                    value={form.idealHumidity_min}
+                    onChange={(e) => setForm({ ...form, idealHumidity_min: e.target.value })}
+                    label="Minimum Humidity"
+                    required
+                    renderValue={(value) => `${value}% - ${getHumidityDescription(value)}`}
+                  >
+                    <MenuItem value="" disabled>Select Minimum Humidity</MenuItem>
+                    {humidityOptionsMin.map((humidity) => (
+                      <MenuItem key={humidity} value={humidity}>
+                        <Typography>{humidity}%</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          {getHumidityDescription(humidity)}
+                        </Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth required>
+                  <InputLabel>Maximum Humidity</InputLabel>
+                  <Select
+                    value={form.idealHumidity_max}
+                    onChange={(e) => setForm({ ...form, idealHumidity_max: e.target.value })}
+                    label="Maximum Humidity"
+                    required
+                    error={form.idealHumidity_max <= form.idealHumidity_min}
+                    renderValue={(value) => `${value}% - ${getHumidityDescription(value)}`}
+                  >
+                    <MenuItem value="" disabled>Select Maximum Humidity</MenuItem>
+                    {humidityOptionsMax.map((humidity) => (
+                      <MenuItem 
+                        key={humidity} 
+                        value={humidity}
+                        disabled={humidity <= form.idealHumidity_min}
+                      >
+                        <Typography>{humidity}%</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          {getHumidityDescription(humidity)}
+                        </Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 </Stack>
               </Grid>
             </Grid>
@@ -637,94 +696,124 @@ const weatherConditions = [
           return (
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Maximum Wind Speed</InputLabel>
-                  <Select
-                    value={form.requiredWindSpeed_max}
-                    onChange={(e) => setForm({ ...form, requiredWindSpeed_max: e.target.value })}
-                    label="Maximum Wind Speed"
-                    required
-                  >
-                    <MenuItem value="" disabled>Select Maximum Wind Speed</MenuItem>
-                    {windSpeedOptions.map((speed) => (
-                      <MenuItem key={speed} value={speed}>{speed} m/s</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <FormControl fullWidth required>
+                <InputLabel>Maximum Wind Speed</InputLabel>
+                <Select
+                  value={form.requiredWindSpeed_max}
+                  onChange={(e) => setForm({ ...form, requiredWindSpeed_max: e.target.value })}
+                  label="Maximum Wind Speed"
+                  required
+                  renderValue={(value) => `${value} m/s - ${getWindSpeedDescription(value)}`}
+                >
+                  <MenuItem value="" disabled>Select Maximum Wind Speed</MenuItem>
+                  {windSpeedOptions.map((speed) => (
+                    <MenuItem key={speed} value={speed}>
+                      <Typography>{speed} m/s</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {getWindSpeedDescription(speed)}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Maximum Wind Gust</InputLabel>
-                  <Select
-                    value={form.requiredWindGust_max}
-                    onChange={(e) => setForm({ ...form, requiredWindGust_max: e.target.value })}
-                    label="Maximum Wind Gust"
-                    required
-                  >
-                    <MenuItem value="" disabled>Select Maximum Wind Gust</MenuItem>
-                    {windGustOptions.map((gust) => (
-                      <MenuItem key={gust} value={gust}>{gust} m/s</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+              <FormControl fullWidth required>
+                <InputLabel>Maximum Wind Gust</InputLabel>
+                <Select
+                  value={form.requiredWindGust_max}
+                  onChange={(e) => setForm({ ...form, requiredWindGust_max: e.target.value })}
+                  label="Maximum Wind Gust"
+                  required
+                  renderValue={(value) => `${value} m/s - ${getWindSpeedDescription(value)}`}
+                >
+                  <MenuItem value="" disabled>Select Maximum Wind Gust</MenuItem>
+                  {windGustOptions.map((gust) => (
+                    <MenuItem key={gust} value={gust}>
+                      <Typography>{gust} m/s</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {getWindSpeedDescription(gust)}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
-                <TextField
-                  label="Maximum Cloud Cover (%)"
-                  type="number"
+              <FormControl fullWidth required>
+                <InputLabel>Maximum Cloud Cover</InputLabel>
+                <Select
                   value={form.requiredCloudCover_max}
                   onChange={(e) => {
-                    const value = Math.min(Math.max(1, parseInt(e.target.value) || 1), 100);
+                    const value = parseInt(e.target.value);
                     setForm({ ...form, requiredCloudCover_max: value });
                   }}
-                  inputProps={{ min: 1, max: 100 }}
-                  fullWidth
+                  label="Maximum Cloud Cover"
                   required
-                  error={form.requiredCloudCover_max < 1 || form.requiredCloudCover_max > 100}
-                  helperText={form.requiredCloudCover_max < 1 || form.requiredCloudCover_max > 100 ? 
-                    "Value must be between 1 and 100" : ""}
-                />
+                  renderValue={(value) => `${value}% - ${getCloudCoverDescription(value)}`}
+                >
+                  <MenuItem value="" disabled>Select Maximum Cloud Cover</MenuItem>
+                  {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map((percentage) => (
+                    <MenuItem key={percentage} value={percentage}>
+                      <Typography>{percentage}%</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {getCloudCoverDescription(percentage)}
+                      </Typography>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color={colors.subtext} gutterBottom>
                   Pressure Range (hPa)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Minimum Pressure</InputLabel>
-                    <Select
-                      value={form.requiredPressure_min}
-                      onChange={(e) => setForm({ ...form, requiredPressure_min: e.target.value })}
-                      label="Minimum Pressure"
-                      required
-                    >
-                      <MenuItem value="" disabled>Select Minimum Pressure</MenuItem>
-                      {pressureOptionsMin.map((pressure) => (
-                        <MenuItem key={pressure} value={pressure}>{pressure} hPa</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl fullWidth required>
-                    <InputLabel>Maximum Pressure</InputLabel>
-                    <Select
-                      value={form.requiredPressure_max}
-                      onChange={(e) => setForm({ ...form, requiredPressure_max: e.target.value })}
-                      label="Maximum Pressure"
-                      required
-                      error={form.requiredPressure_max <= form.requiredPressure_min}
-                    >
-                      <MenuItem value="" disabled>Select Maximum Pressure</MenuItem>
-                      {pressureOptionsMax.map((pressure) => (
-                        <MenuItem 
-                          key={pressure} 
-                          value={pressure}
-                          disabled={pressure <= form.requiredPressure_min}
-                        >
-                          {pressure} hPa
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                <FormControl fullWidth required>
+                  <InputLabel>Minimum Pressure</InputLabel>
+                  <Select
+                    value={form.requiredPressure_min}
+                    onChange={(e) => setForm({ ...form, requiredPressure_min: e.target.value })}
+                    label="Minimum Pressure"
+                    required
+                    renderValue={(value) => `${value} hPa - ${getPressureDescription(value)}`}
+                  >
+                    <MenuItem value="" disabled>Select Minimum Pressure</MenuItem>
+                    {pressureOptionsMin.map((pressure) => (
+                      <MenuItem key={pressure} value={pressure}>
+                        <Typography>{pressure} hPa</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          {getPressureDescription(pressure)}
+                        </Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth required>
+                  <InputLabel>Maximum Pressure</InputLabel>
+                  <Select
+                    value={form.requiredPressure_max}
+                    onChange={(e) => setForm({ ...form, requiredPressure_max: e.target.value })}
+                    label="Maximum Pressure"
+                    required
+                    error={form.requiredPressure_max <= form.requiredPressure_min}
+                    renderValue={(value) => `${value} hPa - ${getPressureDescription(value)}`}
+                  >
+                    <MenuItem value="" disabled>Select Maximum Pressure</MenuItem>
+                    {pressureOptionsMax.map((pressure) => (
+                      <MenuItem 
+                        key={pressure} 
+                        value={pressure}
+                        disabled={pressure <= form.requiredPressure_min}
+                      >
+                        <Typography>{pressure} hPa</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          {getPressureDescription(pressure)}
+                        </Typography>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 </Stack>
               </Grid>
             </Grid>
