@@ -655,6 +655,7 @@ const getPressureDescription = (pressure) => {
                     <MenuItem value="" disabled>Select Minimum Humidity</MenuItem>
                     {[
                       { value: 60, description: "Moderate - Some moisture in the air, but still balanced" },
+                      { value: 70, description: "High - The air holds a lot of moisture, making it feel damp" },
                     ].map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
