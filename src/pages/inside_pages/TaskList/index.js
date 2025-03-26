@@ -717,19 +717,29 @@ const getPressureDescription = (pressure) => {
                   renderValue={(value) => `${value} m/s - ${getWindSpeedDescription(value)}`}
                 >
                   <MenuItem value="" disabled>Select Maximum Wind Speed</MenuItem>
-                  {windSpeedOptions.map((speed) => (
-                    <MenuItem key={speed} value={speed}>
-                      <Typography>{speed} m/s</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                        {getWindSpeedDescription(speed)}
-                      </Typography>
+                  {[
+                    { value: '0.5', description: "Calm - Smoke rises vertically" },
+                    { value: '1.5', description: "Light Air - Smoke drift shows wind direction" },
+                    { value: '3.3', description: "Light Breeze - Leaves rustle" },
+                    { value: '5.5', description: "Gentle Breeze - Leaves and small twigs in constant motion" },
+                    { value: '8.0', description: "Moderate Breeze - Dust and loose paper raised" },
+                    { value: '10.7', description: "Fresh Breeze - Small trees sway" },
+                    { value: '13.8', description: "Strong Breeze - Large branches moving" }
+                  ].map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography>{option.value} m/s</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.description}
+                        </Typography>
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
               </Grid>
               <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
+             <FormControl fullWidth required>
                 <InputLabel>Maximum Wind Gust</InputLabel>
                 <Select
                   value={form.requiredWindGust_max}
@@ -739,12 +749,19 @@ const getPressureDescription = (pressure) => {
                   renderValue={(value) => `${value} m/s - ${getWindSpeedDescription(value)}`}
                 >
                   <MenuItem value="" disabled>Select Maximum Wind Gust</MenuItem>
-                  {windGustOptions.map((gust) => (
-                    <MenuItem key={gust} value={gust}>
-                      <Typography>{gust} m/s</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                        {getWindSpeedDescription(gust)}
-                      </Typography>
+                  {[
+                    { value: '2.0', description: "Mild Gusts - Slight wind variation" },
+                    { value: '5.0', description: "Noticeable Gusts - Trees swaying" },
+                    { value: '8.0', description: "Strong Gusts - Walking becomes difficult" },
+                    { value: '10.0', description: "Extreme Gusts - Potential property damage" }
+                  ].map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography>{option.value} m/s</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.description}
+                        </Typography>
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
@@ -764,12 +781,21 @@ const getPressureDescription = (pressure) => {
                   renderValue={(value) => `${value}% - ${getCloudCoverDescription(value)}`}
                 >
                   <MenuItem value="" disabled>Select Maximum Cloud Cover</MenuItem>
-                  {Array.from({ length: 20 }, (_, i) => (i + 1) * 5).map((percentage) => (
-                    <MenuItem key={percentage} value={percentage}>
-                      <Typography>{percentage}%</Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                        {getCloudCoverDescription(percentage)}
-                      </Typography>
+                  {[
+                    { value: 10, description: "Clear sky - Little to no clouds" },
+                    { value: 25, description: "Few clouds - Mostly sunny" },
+                    { value: 50, description: "Scattered clouds - Partly cloudy" },
+                    { value: 75, description: "Broken clouds - Mostly cloudy" },
+                    { value: 90, description: "Overcast - Very cloudy" },
+                    { value: 100, description: "Complete cloud cover" }
+                  ].map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography>{option.value}%</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.description}
+                        </Typography>
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
@@ -780,7 +806,7 @@ const getPressureDescription = (pressure) => {
                   Pressure Range (hPa)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                <FormControl fullWidth required>
+               <FormControl fullWidth required>
                   <InputLabel>Minimum Pressure</InputLabel>
                   <Select
                     value={form.requiredPressure_min}
@@ -790,41 +816,54 @@ const getPressureDescription = (pressure) => {
                     renderValue={(value) => `${value} hPa - ${getPressureDescription(value)}`}
                   >
                     <MenuItem value="" disabled>Select Minimum Pressure</MenuItem>
-                    {pressureOptionsMin.map((pressure) => (
-                      <MenuItem key={pressure} value={pressure}>
-                        <Typography>{pressure} hPa</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          {getPressureDescription(pressure)}
-                        </Typography>
+                    {[
+                      { value: 990, description: "Very Low - Strong storm likely" },
+                      { value: 1000, description: "Low - Unsettled weather conditions" },
+                      { value: 1010, description: "Slightly Low - Changing weather" },
+                      { value: 1015, description: "Normal - Stable conditions" }
+                    ].map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography>{option.value} hPa</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.description}
+                          </Typography>
+                        </Box>
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <FormControl fullWidth required>
-                  <InputLabel>Maximum Pressure</InputLabel>
-                  <Select
-                    value={form.requiredPressure_max}
-                    onChange={(e) => setForm({ ...form, requiredPressure_max: e.target.value })}
-                    label="Maximum Pressure"
-                    required
-                    error={form.requiredPressure_max <= form.requiredPressure_min}
-                    renderValue={(value) => `${value} hPa - ${getPressureDescription(value)}`}
-                  >
-                    <MenuItem value="" disabled>Select Maximum Pressure</MenuItem>
-                    {pressureOptionsMax.map((pressure) => (
-                      <MenuItem 
-                        key={pressure} 
-                        value={pressure}
-                        disabled={pressure <= form.requiredPressure_min}
-                      >
-                        <Typography>{pressure} hPa</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          {getPressureDescription(pressure)}
-                        </Typography>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <InputLabel>Maximum Pressure</InputLabel>
+                    <Select
+                      value={form.requiredPressure_max}
+                      onChange={(e) => setForm({ ...form, requiredPressure_max: e.target.value })}
+                      label="Maximum Pressure"
+                      required
+                      renderValue={(value) => `${value} hPa - ${getPressureDescription(value)}`}
+                    >
+                      <MenuItem value="" disabled>Select Maximum Pressure</MenuItem>
+                      {[
+                        { value: 1020, description: "Normal - Fair weather" },
+                        { value: 1025, description: "Slightly High - Dry, stable conditions" },
+                        { value: 1030, description: "High - Very stable weather" },
+                        { value: 1040, description: "Very High - Extremely dry" }
+                      ].map((option) => (
+                        <MenuItem 
+                          key={option.value} 
+                          value={option.value}
+                          disabled={option.value <= form.requiredPressure_min}
+                        >
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography>{option.value} hPa</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.description}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Stack>
               </Grid>
             </Grid>
