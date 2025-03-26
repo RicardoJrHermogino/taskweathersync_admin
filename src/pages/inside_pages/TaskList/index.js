@@ -643,7 +643,7 @@ const getPressureDescription = (pressure) => {
                   Humidity Range (%)
                 </Typography>
                 <Stack direction="row" spacing={2}>
-                <FormControl fullWidth required>
+               <FormControl fullWidth required>
                   <InputLabel>Minimum Humidity</InputLabel>
                   <Select
                     value={form.idealHumidity_min}
@@ -653,41 +653,51 @@ const getPressureDescription = (pressure) => {
                     renderValue={(value) => `${value}% - ${getHumidityDescription(value)}`}
                   >
                     <MenuItem value="" disabled>Select Minimum Humidity</MenuItem>
-                    {humidityOptionsMin.map((humidity) => (
-                      <MenuItem key={humidity} value={humidity}>
-                        <Typography>{humidity}%</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          {getHumidityDescription(humidity)}
-                        </Typography>
+                    {[
+                      { value: 60, description: "Moderate - Some moisture in the air, but still balanced" },
+                    ].map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                          <Typography>{option.value}%</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.description}
+                          </Typography>
+                        </Box>
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <FormControl fullWidth required>
-                  <InputLabel>Maximum Humidity</InputLabel>
-                  <Select
-                    value={form.idealHumidity_max}
-                    onChange={(e) => setForm({ ...form, idealHumidity_max: e.target.value })}
-                    label="Maximum Humidity"
-                    required
-                    error={form.idealHumidity_max <= form.idealHumidity_min}
-                    renderValue={(value) => `${value}% - ${getHumidityDescription(value)}`}
-                  >
-                    <MenuItem value="" disabled>Select Maximum Humidity</MenuItem>
-                    {humidityOptionsMax.map((humidity) => (
-                      <MenuItem 
-                        key={humidity} 
-                        value={humidity}
-                        disabled={humidity <= form.idealHumidity_min}
-                      >
-                        <Typography>{humidity}%</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          {getHumidityDescription(humidity)}
-                        </Typography>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <InputLabel>Maximum Humidity</InputLabel>
+                    <Select
+                      value={form.idealHumidity_max}
+                      onChange={(e) => setForm({ ...form, idealHumidity_max: e.target.value })}
+                      label="Maximum Humidity"
+                      required
+                      renderValue={(value) => `${value}% - ${getHumidityDescription(value)}`}
+                    >
+                      <MenuItem value="" disabled>Select Maximum Humidity</MenuItem>
+                      {[
+                        { value: 70, description: "High - The air holds a lot of moisture, making it feel damp" },
+                        { value: 80, description: "Very High - Excess moisture in the air, making surfaces feel sticky" },
+                        { value: 90, description: "Extreme - Nearly full moisture, like a rainforest" },
+                        { value: 100, description: "Near Saturation - Extremely high moisture levels" }
+                      ].map((option) => (
+                        <MenuItem 
+                          key={option.value} 
+                          value={option.value}
+                          disabled={option.value <= form.idealHumidity_min}
+                        >
+                          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography>{option.value}%</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {option.description}
+                            </Typography>
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Stack>
               </Grid>
             </Grid>
