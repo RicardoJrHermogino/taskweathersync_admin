@@ -539,7 +539,7 @@ const getPressureDescription = (pressure) => {
               </Grid>
               <Grid item xs={12}>
                 <TextField
-                  label="Details"
+                  label="Recommendation notes"
                   value={form.details}
                   onChange={(e) => setForm({ ...form, details: e.target.value })}
                   fullWidth
