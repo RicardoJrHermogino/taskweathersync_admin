@@ -14,27 +14,32 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        username,
-        password,
-      });
+  e.preventDefault();
+  setIsLoading(true);
+  
+  try {
+    const result = await signIn("credentials", {
+      redirect: false,
+      username,
+      password,
+    });
 
-      if (result.error) {
-        setError(result.error);
+    if (result.error) {
+      // Replace the default error with your custom message
+      if (result.error === "CredentialsSignin") {
+        setError("Invalid Login");
       } else {
-        router.push("/inside_pages/dashboard");
+        setError(result.error);
       }
-    } catch (err) {
-      setError("Authentication failed");
-    } finally {
-      setIsLoading(false);
+    } else {
+      router.push("/inside_pages/dashboard");
     }
-  };
+  } catch (err) {
+    setError("Authentication failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <>
