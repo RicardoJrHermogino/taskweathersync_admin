@@ -27,7 +27,7 @@ const Login = () => {
     if (result.error) {
       // Replace the default error with your custom message
       if (result.error === "CredentialsSignin") {
-        setError("Invalid Login");
+        setError("Invalid username or password");
       } else {
         setError(result.error);
       }
