@@ -218,7 +218,7 @@ const Dashboard = () => {
                 icon={TaskIcon}
                 title="Coconut Tasks"
                 value={tasksCount}
-                subtitle="Coconut tasks configured in the TaskWeatherSync app for user access."
+                subtitle="Coconut tasks configured for user access."
                 color={colors.secondary}
                 actionLabel="Manage Tasks"
                 onAction={() => router.push('/inside_pages/TaskList')}
