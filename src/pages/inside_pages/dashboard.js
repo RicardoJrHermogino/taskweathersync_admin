@@ -207,7 +207,7 @@ const Dashboard = () => {
                 icon={DevicesIcon}
                 title="Total Devices"
                 value={devicesCount}
-                subtitle="Registered devices in your network"
+                subtitle="Registered devices in taskweathersync app"
                 color={colors.primary}
                 actionLabel="View All Devices"
                 onAction={() => router.push('/inside_pages/Users')}
@@ -216,9 +216,9 @@ const Dashboard = () => {
             <Grid item xs={12} md={4}>
               <StatCard
                 icon={TaskIcon}
-                title="Active Tasks"
+                title="Coconut Tasks"
                 value={tasksCount}
-                subtitle="Tasks currently in progress"
+                subtitle="Coconut tasks configured in the TaskWeatherSync app for user access."
                 color={colors.secondary}
                 actionLabel="Manage Tasks"
                 onAction={() => router.push('/inside_pages/TaskList')}
