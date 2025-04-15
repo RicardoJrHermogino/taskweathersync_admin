@@ -540,7 +540,7 @@ const getPressureDescription = (pressure) => {
                 required
               />
             </Grid>
-            <Grid item xs={12}>
+           <Grid item xs={12}>
               <TextField
                 label="Recommendation notes"
                 value={form.details}
@@ -553,8 +553,11 @@ const getPressureDescription = (pressure) => {
                 rows={3}
                 variant="outlined"
                 required
-                inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
-                helperText={`${form.details.length}/${DETAILS_MAX_LENGTH} characters`}
+                inputProps={{ 
+                  maxLength: DETAILS_MAX_LENGTH,
+                  placeholder: "Please enter notes in English or Tagalog for better understanding by users"
+                }}
+                helperText={`${form.details.length}/${DETAILS_MAX_LENGTH} characters - Please use English or Tagalog for clarity`}
               />
             </Grid>
             <Grid item xs={12}>
