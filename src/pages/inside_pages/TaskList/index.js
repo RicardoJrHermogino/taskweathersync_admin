@@ -154,8 +154,11 @@ const getPressureDescription = (pressure) => {
     const [activeStep, setActiveStep] = useState(0);
     const [sortBy, setSortBy] = useState('updated');
     const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+    const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
+    
+    const DETAILS_MAX_LENGTH = 180;
+
 
     const [form, setForm] = useState({
       task_name: '',
@@ -523,76 +526,81 @@ const getPressureDescription = (pressure) => {
     };
 
     const getStepContent = (step) => {
-      switch (step) {
-        case 0:
-          return (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  label="Task Name"
-                  value={form.task_name}
-                  onChange={(e) => setForm({ ...form, task_name: e.target.value })}
-                  fullWidth
-                  variant="outlined"
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Recommendation notes"
-                  value={form.details}
-                  onChange={(e) => setForm({ ...form, details: e.target.value })}
-                  fullWidth
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControl component="fieldset" fullWidth>
-                  <FormLabel component="legend" required>Weather Condition Requirements</FormLabel>
-                  {Array.from(new Set(weatherConditions.map(c => c.group))).map(group => (
-                    <Accordion key={group}>
-                      <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        aria-controls={`${group}-content`}
-                        id={`${group}-header`}
-                      >
-                        <Typography>
-                          {group} ({weatherConditions.filter(c => c.group === group).length} conditions)
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <FormGroup>
-                          {weatherConditions
-                            .filter(condition => condition.group === group)
-                            .map((condition) => (
-                              <FormControlLabel
-                                key={condition.id}
-                                control={
-                                  <Checkbox
-                                    checked={Array.isArray(form.weatherRestrictions) && 
-                                      form.weatherRestrictions.some(id => String(id) === String(condition.id))}
-                                      onChange={(e) => {
-                                        const newRestrictions = e.target.checked
-                                          ? [...form.weatherRestrictions, Number(condition.id)]
-                                          : form.weatherRestrictions.filter(id => Number(id) !== Number(condition.id));
-                                        setForm({ ...form, weatherRestrictions: newRestrictions });
-                                      }}
-                                  />
-                                }
-                                label={`${condition.id} - ${condition.label}`}
-                              />
-                          ))}
-                        </FormGroup>
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
-                </FormControl>
-              </Grid>
+    switch (step) {
+      case 0:
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                label="Task Name"
+                value={form.task_name}
+                onChange={(e) => setForm({ ...form, task_name: e.target.value })}
+                fullWidth
+                variant="outlined"
+                required
+              />
             </Grid>
-          );
+            <Grid item xs={12}>
+              <TextField
+                label="Recommendation notes"
+                value={form.details}
+                onChange={(e) => {
+                  const newValue = e.target.value.slice(0, DETAILS_MAX_LENGTH);
+                  setForm({ ...form, details: newValue });
+                }}
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                required
+                inputProps={{ maxLength: DETAILS_MAX_LENGTH }}
+                helperText={`${form.details.length}/${DETAILS_MAX_LENGTH} characters`}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl component="fieldset" fullWidth>
+                <FormLabel component="legend" required>Weather Condition Requirements</FormLabel>
+                {Array.from(new Set(weatherConditions.map(c => c.group))).map(group => (
+                  <Accordion key={group}>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      aria-controls={`${group}-content`}
+                      id={`${group}-header`}
+                    >
+                      <Typography>
+                        {group} ({weatherConditions.filter(c => c.group === group).length} conditions)
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <FormGroup>
+                        {weatherConditions
+                          .filter(condition => condition.group === group)
+                          .map((condition) => (
+                            <FormControlLabel
+                              key={condition.id}
+                              control={
+                                <Checkbox
+                                  checked={Array.isArray(form.weatherRestrictions) && 
+                                    form.weatherRestrictions.some(id => String(id) === String(condition.id))}
+                                  onChange={(e) => {
+                                    const newRestrictions = e.target.checked
+                                      ? [...form.weatherRestrictions, Number(condition.id)]
+                                      : form.weatherRestrictions.filter(id => Number(id) !== Number(condition.id));
+                                    setForm({ ...form, weatherRestrictions: newRestrictions });
+                                  }}
+                                />
+                              }
+                              label={`${condition.id} - ${condition.label}`}
+                            />
+                        ))}
+                      </FormGroup>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </FormControl>
+            </Grid>
+          </Grid>
+        );
         case 1:
           return (
             <Grid container spacing={3}>
